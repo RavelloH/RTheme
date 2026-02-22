@@ -5,7 +5,7 @@ import { execSync } from "child_process";
 import fs from "fs";
 import path from "path";
 import Rlog from "rlog-js";
-import { fileURLToPath, pathToFileURL } from "url";
+import { pathToFileURL } from "url";
 
 import { loadWebEnv } from "@/../scripts/load-env";
 
@@ -19,14 +19,21 @@ loadWebEnv();
 
 const rlog = new Rlog();
 
+type MigrateDeployRunner = () => Promise<void>;
+
 // 获取项目中第一个迁移目录名
 function getFirstProjectMigrationName(): string | null {
   try {
-    const scriptDir = path.dirname(fileURLToPath(import.meta.url));
-    const migrationsDir = path.resolve(scriptDir, "..", "prisma", "migrations");
+    const migrationDirCandidates = [
+      path.resolve(process.cwd(), "prisma", "migrations"),
+      path.resolve(process.cwd(), "apps", "web", "prisma", "migrations"),
+    ];
+    const migrationsDir = migrationDirCandidates.find((candidate) =>
+      fs.existsSync(candidate),
+    );
 
-    if (!fs.existsSync(migrationsDir)) {
-      rlog.warning(`  Migrations directory not found: ${migrationsDir}`);
+    if (!migrationsDir) {
+      rlog.warning("  Migrations directory not found");
       return null;
     }
 
@@ -53,16 +60,13 @@ async function main() {
   rlog.info("> Starting database update process...");
 
   try {
-    await initializePrismaClient();
-    await updateDatabaseInternal();
+    await updateDatabase();
     rlog.success("  Database update completed successfully!");
   } catch (error) {
     rlog.error(
       `  Database update failed: ${error instanceof Error ? error.message : String(error)}`,
     );
     process.exit(1);
-  } finally {
-    await cleanup();
   }
 }
 
@@ -280,23 +284,38 @@ async function runMigrateDeploy(): Promise<void> {
 }
 
 // 导出的更新函数（避免重复执行main函数）
-export async function updateDatabase(): Promise<void> {
+export async function updateDatabase(options?: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  prisma?: any;
+  runMigrateDeploy?: MigrateDeployRunner;
+}): Promise<void> {
+  const externalPrisma = options?.prisma;
+  const shouldManagePrismaLifecycle = !externalPrisma;
   try {
     rlog.info("> Starting database update...");
-    await initializePrismaClient();
-    await updateDatabaseInternal();
+    if (externalPrisma) {
+      prisma = externalPrisma;
+    } else {
+      await initializePrismaClient();
+    }
+    await updateDatabaseInternal(options?.runMigrateDeploy);
   } finally {
-    await cleanup();
+    if (shouldManagePrismaLifecycle) {
+      await cleanup();
+    }
   }
 }
 
 // 内部更新逻辑（重命名避免冲突）
-async function updateDatabaseInternal(): Promise<void> {
+async function updateDatabaseInternal(
+  migrateDeployRunner?: MigrateDeployRunner,
+): Promise<void> {
+  const runMigrate = migrateDeployRunner ?? runMigrateDeploy;
   const isEmpty = await isDatabaseEmpty();
 
   if (isEmpty) {
     rlog.info("  Database is empty, initializing with migrations...");
-    await runMigrateDeploy();
+    await runMigrate();
     rlog.success("✓ Database initialized successfully");
     return;
   }
@@ -308,7 +327,7 @@ async function updateDatabaseInternal(): Promise<void> {
       rlog.info(
         "  Migrations table exists but contains no records, initializing with migrations...",
       );
-      await runMigrateDeploy();
+      await runMigrate();
       rlog.success("✓ Database initialized successfully");
       return;
     }
@@ -335,7 +354,7 @@ async function updateDatabaseInternal(): Promise<void> {
   rlog.info(
     "  Database belongs to this project, applying any pending migrations...",
   );
-  await runMigrateDeploy();
+  await runMigrate();
   rlog.success("  Database updated successfully");
 }
 

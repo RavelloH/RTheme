@@ -11,47 +11,52 @@ const rlog = new RLog();
 let pool: any;
 
 // 从数据文件导入默认配置
-import { defaultConfigs } from "../src/data/default-configs.js";
-import { defaultMenus } from "../src/data/default-menus.js";
-import { defaultPages } from "../src/data/default-pages.js";
+import { defaultConfigs } from "../src/data/default-configs";
+import { defaultMenus } from "../src/data/default-menus";
+import { defaultPages } from "../src/data/default-pages";
 
-async function seedDefaults() {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function seedDefaults(options?: { prisma?: any }) {
+  const externalPrisma = options?.prisma;
+  const shouldManagePrismaLifecycle = !externalPrisma;
+
   try {
-    // 动态导入 Prisma 客户端以避免初始化问题
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let prisma: any;
-    try {
-      // 使用 pathToFileURL 确保跨平台兼容性
-      const clientPath = path.join(
-        process.cwd(),
-        "node_modules",
-        ".prisma",
-        "client",
-      );
-      const clientUrl = pathToFileURL(clientPath).href;
-      const { PrismaClient } = await import(clientUrl);
-      const { Pool } = await import("pg");
-      const { PrismaPg } = await import("@prisma/adapter-pg");
+    let prisma: any = externalPrisma;
+    if (!prisma) {
+      try {
+        // 使用 pathToFileURL 确保跨平台兼容性
+        const clientPath = path.join(
+          process.cwd(),
+          "node_modules",
+          ".prisma",
+          "client",
+        );
+        const clientUrl = pathToFileURL(clientPath).href;
+        const { PrismaClient } = await import(clientUrl);
+        const { Pool } = await import("pg");
+        const { PrismaPg } = await import("@prisma/adapter-pg");
 
-      // 使用与生产环境相同的 adapter 模式
-      pool = new Pool({
-        connectionString: process.env.DATABASE_URL,
-      });
-      const adapter = new PrismaPg(pool);
+        // 使用与生产环境相同的 adapter 模式
+        pool = new Pool({
+          connectionString: process.env.DATABASE_URL,
+        });
+        const adapter = new PrismaPg(pool);
 
-      prisma = new PrismaClient({
-        adapter,
-        log: [],
-      });
+        prisma = new PrismaClient({
+          adapter,
+          log: [],
+        });
 
-      // 测试连接
-      await prisma.$connect();
-    } catch (error) {
-      rlog.warning(
-        "Prisma client not initialized, skipping default value seeding",
-      );
-      rlog.warning("Error details:", error);
-      return;
+        // 测试连接
+        await prisma.$connect();
+      } catch (error) {
+        rlog.warning(
+          "Prisma client not initialized, skipping default value seeding",
+        );
+        rlog.warning("Error details:", error);
+        return;
+      }
     }
 
     // 种子化默认配置
@@ -67,17 +72,19 @@ async function seedDefaults() {
     await seedDefaultPagesAndMenus(prisma);
 
     rlog.success("✓ Database default values check completed");
-    await prisma.$disconnect();
+    if (shouldManagePrismaLifecycle) {
+      await prisma.$disconnect();
 
-    // 关闭连接池
-    if (pool) {
-      try {
-        await pool.end();
-        rlog.info("  Connection pool closed");
-      } catch (error) {
-        rlog.warning(
-          `  Error closing connection pool: ${error instanceof Error ? error.message : String(error)}`,
-        );
+      // 关闭连接池
+      if (pool) {
+        try {
+          await pool.end();
+          rlog.info("  Connection pool closed");
+        } catch (error) {
+          rlog.warning(
+            `  Error closing connection pool: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
       }
     }
   } catch (error) {
@@ -441,9 +448,6 @@ async function seedSystemFolders(prisma: any) {
     `✓ System folders check completed: added ${addedCount} items, skipped ${skippedCount} items`,
   );
 }
-
-// 导出主函数供其他脚本使用
-export { seedDefaults };
 
 // 主函数 - 用于直接运行脚本
 async function main() {

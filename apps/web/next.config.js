@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import { cpus as osCpus } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -7,6 +8,7 @@ import { config as loadDotenv } from "dotenv";
 
 const webRootDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRootDir = path.resolve(webRootDir, "..", "..");
+const moduleResolver = createRequire(import.meta.url);
 
 function getEnvFiles(nodeEnv) {
   const files = [`.env.${nodeEnv}.local`];
@@ -41,8 +43,115 @@ function loadMonorepoEnv() {
 
 loadMonorepoEnv();
 
+function toPosixPath(filePath) {
+  return filePath.replaceAll(path.sep, "/");
+}
+
+function resolvePackageJsonPath(packageName) {
+  for (const searchRoot of [webRootDir, repoRootDir]) {
+    try {
+      return moduleResolver.resolve(`${packageName}/package.json`, {
+        paths: [searchRoot],
+      });
+    } catch {
+      // noop
+    }
+  }
+
+  return null;
+}
+
+function resolvePackageJsonPathFrom(packageName, basedir) {
+  try {
+    return moduleResolver.resolve(`${packageName}/package.json`, {
+      paths: [basedir],
+    });
+  } catch {
+    return resolvePackageJsonPath(packageName);
+  }
+}
+
+function collectRuntimePackageIncludes(entryPackageNames) {
+  const visitedPackageJsonPaths = new Set();
+  const pendingPackageJsonPaths = entryPackageNames
+    .map((packageName) => resolvePackageJsonPath(packageName))
+    .filter((item) => Boolean(item));
+  const includeGlobs = new Set();
+
+  while (pendingPackageJsonPaths.length > 0) {
+    const packageJsonPath = pendingPackageJsonPaths.shift();
+    if (!packageJsonPath || visitedPackageJsonPaths.has(packageJsonPath)) {
+      continue;
+    }
+
+    visitedPackageJsonPaths.add(packageJsonPath);
+
+    const packageDir = path.dirname(packageJsonPath);
+    const relativeDir = path.relative(repoRootDir, packageDir);
+    if (!relativeDir.startsWith("..")) {
+      includeGlobs.add(`./${toPosixPath(relativeDir)}/**/*`);
+    }
+
+    try {
+      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+      const dependencyNames = Object.keys({
+        ...(packageJson.dependencies ?? {}),
+        ...(packageJson.optionalDependencies ?? {}),
+      });
+      for (const dependencyName of dependencyNames) {
+        const dependencyPackageJsonPath = resolvePackageJsonPathFrom(
+          dependencyName,
+          packageDir,
+        );
+        if (dependencyPackageJsonPath) {
+          pendingPackageJsonPaths.push(dependencyPackageJsonPath);
+        }
+      }
+    } catch {
+      // noop
+    }
+  }
+
+  return [...includeGlobs];
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = () => {
+  const prismaRequiredPackages = [
+    "prisma",
+    "@prisma/client",
+    "@prisma/adapter-pg",
+  ];
+
+  const prismaTracingIncludes = Array.from(
+    new Set([
+      "./apps/web/node_modules/.prisma/client/**/*",
+      "./node_modules/.prisma/client/**/*",
+      "./apps/web/node_modules/prisma/**/*",
+      "./apps/web/node_modules/@prisma/**/*",
+      "./node_modules/prisma/**/*",
+      "./node_modules/@prisma/**/*",
+      "./node_modules/.pnpm/prisma@*/node_modules/**/*",
+      "./node_modules/.pnpm/@prisma+*@*/node_modules/**/*",
+      ...collectRuntimePackageIncludes(prismaRequiredPackages),
+    ]),
+  );
+
+  const serverExternalPackages = [
+    "ably",
+    "akismet-api",
+    "@node-rs/jieba",
+    ...prismaRequiredPackages,
+  ];
+
+  const tracingIncludes = Array.from(
+    new Set([
+      ...prismaTracingIncludes,
+      "./src/lib/server/lua-scripts/**/*.lua",
+      "./node_modules/node-ip2region/data/ip2region.db",
+    ]),
+  );
+
   const tracingExcludes = [
     "**/@esbuild/linux-x64/**",
     "**/@esbuild/linux-arm64/**",
@@ -80,20 +189,17 @@ const nextConfig = () => {
     },
     // eslint-disable-next-line no-undef
     output: process.env.BUILD_STANDALONE ? "standalone" : undefined,
-    serverExternalPackages: ["ably", "akismet-api", "@node-rs/jieba"],
+    outputFileTracingRoot: repoRootDir,
+    serverExternalPackages,
     cacheComponents: true,
     reactCompiler: true,
     outputFileTracingIncludes: {
-      "/api/**/*": [
-        "./node_modules/.prisma/client/**/*",
-        "./src/lib/server/lua-scripts/**/*.lua",
-        "./node_modules/node-ip2region/data/ip2region.db",
-      ],
-      "/*": [
-        "./node_modules/.prisma/client/**/*",
-        "./src/lib/server/lua-scripts/**/*.lua",
-        "./node_modules/node-ip2region/data/ip2region.db",
-      ],
+      "/api/**/*": tracingIncludes,
+      "/internal/runtime/init": tracingIncludes,
+      "/internal/cache/bootstrap": tracingIncludes,
+      "/(build-in)/internal/runtime/init/route": tracingIncludes,
+      "/(build-in)/internal/cache/bootstrap/route": tracingIncludes,
+      "/**/*": tracingIncludes,
     },
     experimental: {
       optimizePackageImports: ["@remixicon/react"],

@@ -12,7 +12,6 @@
     "build:pre": "tsx scripts/prebuild.ts",
     "build:post": "tsx scripts/postbuild.ts",
     "init:runtime": "tsx scripts/runtime-init.ts",
-    "cache:bootstrap": "tsx scripts/bootstrap-cache.ts",
     "generate:blocks": "tsx scripts/generate-block-business-catalog.ts && tsx scripts/generate-block-definition-catalog.ts",
     "start": "next start",
     "lint": "eslint --max-warnings 0 . --fix",

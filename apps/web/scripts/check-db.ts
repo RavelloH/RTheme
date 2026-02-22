@@ -19,12 +19,21 @@ loadWebEnv();
 const rlog = new Rlog();
 
 // 导出的数据库健康检查函数
-export async function checkDatabaseHealth(): Promise<void> {
+export async function checkDatabaseHealth(options?: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  prisma?: any;
+}): Promise<void> {
   rlog.info("> Starting database health check...");
+  const externalPrisma = options?.prisma;
+  const shouldManagePrismaLifecycle = !externalPrisma;
 
   try {
     await checkEnvironment();
-    await initializePrismaClient();
+    if (externalPrisma) {
+      prisma = externalPrisma;
+    } else {
+      await initializePrismaClient();
+    }
     await testConnection();
     await checkDatabaseSchema();
     await checkMigrationStatus();
@@ -37,7 +46,9 @@ export async function checkDatabaseHealth(): Promise<void> {
     );
     throw error; // 重新抛出错误，让调用者处理
   } finally {
-    await cleanup();
+    if (shouldManagePrismaLifecycle) {
+      await cleanup();
+    }
   }
 }
 
