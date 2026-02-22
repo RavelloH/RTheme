@@ -187,7 +187,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: apps/web/Dockerfile
+          file: Dockerfile
           platforms: ${{ matrix.platform }}
           tags: |
             ${{ env.DOCKERHUB_USERNAME }}/neutralpress
