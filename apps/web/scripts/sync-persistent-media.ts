@@ -6,7 +6,6 @@ import RLog from "rlog-js";
 import { pathToFileURL } from "url";
 
 const rlog = new RLog();
-const PUBLIC_DIR = path.join(process.cwd(), "public");
 const SYNC_CONCURRENCY = 16;
 
 interface PersistentMediaRecord {
@@ -59,14 +58,29 @@ function normalizePersistentPath(rawPath: string): string | null {
   return normalized;
 }
 
-function toPublicAbsolutePath(relativePath: string): string {
+function resolvePublicDir(): string {
+  const candidates = [
+    path.join(process.cwd(), "apps", "web", "public"),
+    path.join(process.cwd(), "public"),
+  ];
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  return candidates[0] ?? path.join(process.cwd(), "public");
+}
+
+function toPublicAbsolutePath(publicDir: string, relativePath: string): string {
   const safePath = normalizePersistentPath(relativePath);
   if (!safePath) {
     throw new Error(`非法路径: ${relativePath}`);
   }
 
-  const absolutePath = path.resolve(PUBLIC_DIR, ...safePath.split("/"));
-  const relative = path.relative(PUBLIC_DIR, absolutePath);
+  const absolutePath = path.resolve(publicDir, ...safePath.split("/"));
+  const relative = path.relative(publicDir, absolutePath);
   if (relative.startsWith("..") || path.isAbsolute(relative)) {
     throw new Error(`路径越界: ${relativePath}`);
   }
@@ -184,17 +198,26 @@ async function fetchPersistentMedia(
   return Array.from(uniquePathMap.values());
 }
 
-export async function syncPersistentMedia(): Promise<void> {
+export async function syncPersistentMedia(options?: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  prisma?: any;
+}): Promise<void> {
+  const publicDir = resolvePublicDir();
   rlog.log("> Synchronizing persistent media files into public directory...");
 
-  if (!fs.existsSync(PUBLIC_DIR)) {
-    fs.mkdirSync(PUBLIC_DIR, { recursive: true });
+  if (!fs.existsSync(publicDir)) {
+    fs.mkdirSync(publicDir, { recursive: true });
   }
 
+  const externalPrisma = options?.prisma;
+  const shouldManagePrismaLifecycle = !externalPrisma;
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let prisma: any;
+  let prisma: any = externalPrisma;
   try {
-    prisma = await createPrismaClient();
+    if (!prisma) {
+      prisma = await createPrismaClient();
+    }
     const mediaList = await fetchPersistentMedia(prisma);
 
     let downloadedCount = 0;
@@ -224,7 +247,10 @@ export async function syncPersistentMedia(): Promise<void> {
         }
 
         try {
-          const outputPath = toPublicAbsolutePath(media.persistentPath);
+          const outputPath = toPublicAbsolutePath(
+            publicDir,
+            media.persistentPath,
+          );
           const outputDir = path.dirname(outputPath);
           if (!fs.existsSync(outputDir)) {
             fs.mkdirSync(outputDir, { recursive: true });
@@ -276,10 +302,10 @@ export async function syncPersistentMedia(): Promise<void> {
       `✓ Persistent media sync completed (downloaded: ${downloadedCount}, skipped: ${skippedCount})`,
     );
   } finally {
-    if (prisma) {
+    if (prisma && shouldManagePrismaLifecycle) {
       await prisma.$disconnect();
     }
-    if (pool) {
+    if (pool && shouldManagePrismaLifecycle) {
       await pool.end();
     }
   }

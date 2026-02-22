@@ -18,7 +18,7 @@ import {
   buildCloudSignMessage,
   encodeBase64Url,
   generateNonce,
-} from "../src/lib/shared/cloud-signature.js";
+} from "../src/lib/shared/cloud-signature";
 
 loadWebEnv();
 
@@ -400,8 +400,13 @@ async function syncToCloud(configValue: CloudSyncConfig): Promise<void> {
   }
 }
 
-export async function syncCloudInstance(): Promise<void> {
-  const runtime = await createPrismaClient();
+export async function syncCloudInstance(options?: {
+  prisma?: ScriptPrismaClient;
+}): Promise<void> {
+  const externalPrisma = options?.prisma;
+  const runtime = externalPrisma
+    ? { prisma: externalPrisma, pool: null }
+    : await createPrismaClient();
   if (!runtime) return;
 
   const { prisma, pool } = runtime;
@@ -414,7 +419,9 @@ export async function syncCloudInstance(): Promise<void> {
       ` Prebuild cloud sync error (ignored): ${error instanceof Error ? error.message : String(error)}`,
     );
   } finally {
-    await prisma.$disconnect().catch(() => undefined);
-    await pool?.end?.().catch(() => undefined);
+    if (!externalPrisma) {
+      await prisma.$disconnect().catch(() => undefined);
+      await pool?.end?.().catch(() => undefined);
+    }
   }
 }

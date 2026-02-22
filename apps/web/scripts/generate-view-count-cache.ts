@@ -17,43 +17,51 @@ const REDIS_VIEW_COUNT_KEY = "np:view_count:all";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let pool: any;
 
-export default async function generateViewCountCache() {
+export default async function generateViewCountCache(options?: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let prisma: any;
+  prisma?: any;
+}) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let prisma: any = options?.prisma;
   let redis: Redis | null = null;
+  const shouldManagePrismaLifecycle = !options?.prisma;
 
   try {
     rlog.log("> Generating view count cache...");
 
-    // 1. 动态导入 Prisma 客户端
-    try {
-      const clientPath = path.join(
-        process.cwd(),
-        "node_modules",
-        ".prisma",
-        "client",
-      );
-      const clientUrl = pathToFileURL(clientPath).href;
-      const { PrismaClient } = await import(clientUrl);
-      const { Pool } = await import("pg");
-      const { PrismaPg } = await import("@prisma/adapter-pg");
+    if (!prisma) {
+      // 1. 动态导入 Prisma 客户端
+      try {
+        const clientPath = path.join(
+          process.cwd(),
+          "node_modules",
+          ".prisma",
+          "client",
+        );
+        const clientUrl = pathToFileURL(clientPath).href;
+        const { PrismaClient } = await import(clientUrl);
+        const { Pool } = await import("pg");
+        const { PrismaPg } = await import("@prisma/adapter-pg");
 
-      // 使用与生产环境相同的 adapter 模式
-      pool = new Pool({
-        connectionString: process.env.DATABASE_URL,
-      });
-      const adapter = new PrismaPg(pool);
+        // 使用与生产环境相同的 adapter 模式
+        pool = new Pool({
+          connectionString: process.env.DATABASE_URL,
+        });
+        const adapter = new PrismaPg(pool);
 
-      prisma = new PrismaClient({
-        adapter,
-        log: [],
-      });
+        prisma = new PrismaClient({
+          adapter,
+          log: [],
+        });
 
-      await prisma.$connect();
-    } catch (error) {
-      rlog.warning("Prisma client not initialized, skipping cache generation");
-      rlog.warning("Error details:", error);
-      return;
+        await prisma.$connect();
+      } catch (error) {
+        rlog.warning(
+          "Prisma client not initialized, skipping cache generation",
+        );
+        rlog.warning("Error details:", error);
+        return;
+      }
     }
 
     // 2. 初始化 Redis 连接
@@ -121,13 +129,13 @@ export default async function generateViewCountCache() {
     throw error;
   } finally {
     // 清理资源
-    if (prisma) {
+    if (prisma && shouldManagePrismaLifecycle) {
       await prisma.$disconnect();
     }
     if (redis) {
       await redis.quit();
     }
-    if (pool) {
+    if (pool && shouldManagePrismaLifecycle) {
       try {
         await pool.end();
         rlog.info("  Connection pool closed");

@@ -16,6 +16,14 @@ rlog.config.setConfig({
 });
 
 export async function runRuntimeInitialization(): Promise<void> {
+  await runRuntimeInitializationWithOptions();
+}
+
+export async function runRuntimeInitializationWithOptions(options?: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  prisma?: any;
+  runMigrateDeploy?: () => Promise<void>;
+}): Promise<void> {
   rlog.log();
   rlog.log("NeutralPress Runtime Initialization...");
   rlog.log();
@@ -35,34 +43,47 @@ export async function runRuntimeInitialization(): Promise<void> {
 
   rlog.log("Starting database check...");
   const { checkDatabaseHealth } = await import("./check-db.js");
-  await checkDatabaseHealth();
+  await checkDatabaseHealth({
+    prisma: options?.prisma,
+  });
   rlog.log();
 
   rlog.log("Starting database update...");
   const { updateDatabase } = await import("./update-db.js");
-  await updateDatabase();
+  await updateDatabase({
+    prisma: options?.prisma,
+    runMigrateDeploy: options?.runMigrateDeploy,
+  });
   rlog.log();
 
   rlog.info("Starting database seeding with default values...");
   const { seedDefaults } = await import("./seed-defaults.js");
-  await seedDefaults();
+  await seedDefaults({
+    prisma: options?.prisma,
+  });
   rlog.log();
 
   rlog.log("Starting persistent media synchronization...");
   const { syncPersistentMedia } = await import("./sync-persistent-media.js");
-  await syncPersistentMedia();
+  await syncPersistentMedia({
+    prisma: options?.prisma,
+  });
   rlog.log();
 
   rlog.log("Starting cloud instance synchronization...");
   const { syncCloudInstance } = await import("./sync-cloud-instance.js");
-  await syncCloudInstance();
+  await syncCloudInstance({
+    prisma: options?.prisma,
+  });
   rlog.log();
 
   rlog.log("Starting view count cache generation...");
   const { default: generateViewCountCache } = await import(
     "./generate-view-count-cache.js"
   );
-  await generateViewCountCache();
+  await generateViewCountCache({
+    prisma: options?.prisma,
+  });
   rlog.log();
 
   rlog.success("✓ Runtime initialization completed successfully!");
@@ -71,7 +92,7 @@ export async function runRuntimeInitialization(): Promise<void> {
 
 async function main() {
   try {
-    await runRuntimeInitialization();
+    await runRuntimeInitializationWithOptions();
   } catch (error) {
     rlog.log();
     rlog.error(
