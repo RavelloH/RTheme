@@ -117,40 +117,51 @@ function collectRuntimePackageIncludes(entryPackageNames) {
 
 /** @type {import('next').NextConfig} */
 const nextConfig = () => {
+  const isStandaloneBuild = ["1", "true"].includes(
+    String(process.env.BUILD_STANDALONE ?? "").toLowerCase(),
+  );
+  const isVercelBuild = ["1", "true"].includes(
+    String(process.env.VERCEL ?? "").toLowerCase(),
+  );
+  const shouldUseAggressivePrismaTracing = isStandaloneBuild && !isVercelBuild;
+
   const prismaRequiredPackages = [
     "prisma",
     "@prisma/client",
     "@prisma/adapter-pg",
   ];
 
-  const prismaTracingIncludes = Array.from(
-    new Set([
-      "./apps/web/node_modules/.prisma/client/**/*",
-      "./node_modules/.prisma/client/**/*",
-      "./apps/web/node_modules/prisma/**/*",
-      "./apps/web/node_modules/@prisma/**/*",
-      "./node_modules/prisma/**/*",
-      "./node_modules/@prisma/**/*",
-      "./node_modules/.pnpm/prisma@*/node_modules/**/*",
-      "./node_modules/.pnpm/@prisma+*@*/node_modules/**/*",
-      ...collectRuntimePackageIncludes(prismaRequiredPackages),
-    ]),
+  const baseTracingIncludes = [
+    "./apps/web/node_modules/.prisma/client/**/*",
+    "./node_modules/.prisma/client/**/*",
+    "./src/lib/server/lua-scripts/**/*.lua",
+    "./node_modules/node-ip2region/data/ip2region.db",
+  ];
+
+  const standalonePrismaTracingIncludes = shouldUseAggressivePrismaTracing
+    ? Array.from(
+        new Set([
+          "./apps/web/node_modules/prisma/**/*",
+          "./apps/web/node_modules/@prisma/**/*",
+          "./node_modules/prisma/**/*",
+          "./node_modules/@prisma/**/*",
+          "./node_modules/.pnpm/prisma@*/node_modules/**/*",
+          "./node_modules/.pnpm/@prisma+*@*/node_modules/**/*",
+          ...collectRuntimePackageIncludes(prismaRequiredPackages),
+        ]),
+      )
+    : [];
+
+  const tracingIncludes = Array.from(
+    new Set([...baseTracingIncludes, ...standalonePrismaTracingIncludes]),
   );
 
   const serverExternalPackages = [
     "ably",
     "akismet-api",
     "@node-rs/jieba",
-    ...prismaRequiredPackages,
+    ...(isStandaloneBuild ? prismaRequiredPackages : []),
   ];
-
-  const tracingIncludes = Array.from(
-    new Set([
-      ...prismaTracingIncludes,
-      "./src/lib/server/lua-scripts/**/*.lua",
-      "./node_modules/node-ip2region/data/ip2region.db",
-    ]),
-  );
 
   const tracingExcludes = [
     "**/@esbuild/linux-x64/**",
