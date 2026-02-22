@@ -1,0 +1,179 @@
+name: Publish Workflow
+
+on:
+    push:
+        branches:
+            - main
+
+env:
+    DOCKERHUB_USERNAME: ravelloh
+    GHCR_IMAGE_NAME: ravelloh/neutralpress
+
+jobs:
+    release-and-publish:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write # 允许创建 Release 和 Tag
+            packages: write # 允许推送 GHCR 镜像
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            # 1. 判断这次 push 是否新增了 changelog/v*.md 文件
+            - name: Detect New Changelog
+              id: check
+              run: |
+                  # 兼容处理：获取本次 push 前的 commit SHA
+                  BEFORE_SHA="${{ github.event.before }}"
+                  if [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
+                    BEFORE_SHA="HEAD^"
+                  fi
+
+                  # 寻找在这次 push 中“新增(A)”的符合 changelog/v*.md 格式的文件
+                  NEW_FILE=$(git diff --name-status $BEFORE_SHA ${{ github.sha }} | awk '$1 == "A" {print $2}' | grep -E "^changelog/v[0-9]+\.[0-9]+\.[0-9]+.*\.md$" | head -n 1 || true)
+
+                  if [ -n "$NEW_FILE" ]; then
+                    VERSION=$(basename "$NEW_FILE" .md)     # 提取完整版本号，例如 v5.0.0
+                    SEMVER=${VERSION#v}                     # 剥离 v 用于 Docker，例如 5.0.0
+                    
+                    echo "has_release=true" >> $GITHUB_OUTPUT
+                    if echo "$VERSION" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+                      echo "is_stable_release=true" >> $GITHUB_OUTPUT
+                    else
+                      echo "is_stable_release=false" >> $GITHUB_OUTPUT
+                    fi
+                    echo "version=$VERSION" >> $GITHUB_OUTPUT
+                    echo "semver=$SEMVER" >> $GITHUB_OUTPUT
+                    echo "file_path=$NEW_FILE" >> $GITHUB_OUTPUT
+                    echo "🎉 Detected new release triggered by: $NEW_FILE"
+                  else
+                    echo "has_release=false" >> $GITHUB_OUTPUT
+                    echo "is_stable_release=false" >> $GITHUB_OUTPUT
+                    echo "ℹ️ No new changelog found. Proceeding with edge build only."
+                  fi
+
+            # 2. 生成合并版 Release Notes（手写 Changelog + 自动 Git Log）
+            - name: Generate Combined Release Notes
+              if: steps.check.outputs.has_release == 'true'
+              run: |
+                  VERSION="${{ steps.check.outputs.version }}"
+                  FILE_PATH="${{ steps.check.outputs.file_path }}"
+
+                  # 首先，写入你手写的更新日志（作为正文头部）
+                  cat "$FILE_PATH" > release.md
+                  echo "" >> release.md
+                  echo "---" >> release.md
+
+                  # 只寻找“上一个正式版”tag：严格匹配 vX.Y.Z（不包含 alpha/beta/rc）
+                  PREV_STABLE_TAG=$(git tag -l --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | grep -vx "$VERSION" | head -n1 || true)
+                  if [ -z "$PREV_STABLE_TAG" ]; then
+                    PREV_STABLE_TAG="none"
+                  fi
+
+                  if [ "$PREV_STABLE_TAG" != "none" ]; then
+                    echo "## 详细变更（${PREV_STABLE_TAG} -> ${VERSION}）" >> release.md
+                  else
+                    echo "## 详细变更（初始版本 -> ${VERSION}）" >> release.md
+                  fi
+                  echo "" >> release.md
+
+                  # 附加自动生成的 commit 日志
+                  if [ "$PREV_STABLE_TAG" != "none" ]; then
+                    git log ${PREV_STABLE_TAG}..HEAD --pretty=format:'- [%s](https://github.com/${{ github.repository }}/commit/%H) by @%an' >> release.md
+                  else
+                    echo "- 初始化版本" >> release.md
+                  fi
+
+            # 3. 正式版发布时，同步所有 package.json 的 version，并提交回 main
+            - name: Sync package versions and push
+              if: steps.check.outputs.is_stable_release == 'true'
+              run: |
+                  TARGET_VERSION="${{ steps.check.outputs.semver }}"
+
+                  # 更新仓库内所有受 git 管理的 package.json 的 version 字段
+                  PACKAGE_FILES=$(git ls-files '**/package.json')
+                  for file in $PACKAGE_FILES; do
+                    node -e '
+                      const fs = require("fs");
+                      const path = process.argv[1];
+                      const version = process.argv[2];
+                      const raw = fs.readFileSync(path, "utf8");
+                      const json = JSON.parse(raw);
+                      if (json.version !== version) {
+                        json.version = version;
+                        fs.writeFileSync(path, JSON.stringify(json, null, 2) + "\n");
+                      }
+                    ' "$file" "$TARGET_VERSION"
+                  done
+
+                  git add -- $PACKAGE_FILES
+
+                  # 没有变化则直接跳过
+                  if git diff --cached --quiet; then
+                    echo "ℹ️ package.json version already up-to-date."
+                    exit 0
+                  fi
+
+                  git config user.name "github-actions[bot]"
+                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+                  git commit -m "chore(release): sync package versions to v${TARGET_VERSION} [skip ci]"
+                  git push origin HEAD:${{ github.ref_name }}
+
+            # 4. 创建 Git Tag 并发布 GitHub Release
+            - name: Create GitHub Release
+              if: steps.check.outputs.has_release == 'true'
+              uses: softprops/action-gh-release@v2
+              with:
+                  tag_name: ${{ steps.check.outputs.version }}
+                  name: Release ${{ steps.check.outputs.version }}
+                  body_path: release.md
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            # ---------------------------------------------------------
+            # 5. Docker 构建与发布  
+            # ---------------------------------------------------------
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Log in to Docker Hub
+              uses: docker/login-action@v3
+              with:
+                  username: ${{ env.DOCKERHUB_USERNAME }}
+                  password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+            - name: Log in to GitHub Container Registry
+              uses: docker/login-action@v3
+              with:
+                  registry: ghcr.io
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Extract Docker metadata
+              id: meta
+              uses: docker/metadata-action@v5
+              with:
+                  images: |
+                      ${{ env.DOCKERHUB_USERNAME }}/neutralpress
+                      ghcr.io/${{ env.GHCR_IMAGE_NAME }}
+                  tags: |
+                      # 基础策略：只要推送到 main，无论是否发版，永远会更新 edge 标签
+                      type=raw,value=edge
+
+                      # 条件策略：仅当是正式版时，才会打上 latest 标签
+                      type=raw,value=latest,enable=${{ steps.check.outputs.is_stable_release == 'true' }}
+                      type=raw,value=${{ steps.check.outputs.semver }},enable=${{ steps.check.outputs.has_release == 'true' }}
+
+            - name: Build and push Docker image
+              uses: docker/build-push-action@v5
+              with:
+                  context: .
+                  file: apps/web/Dockerfile
+                  push: true
+                  tags: ${{ steps.meta.outputs.tags }}
+                  labels: ${{ steps.meta.outputs.labels }}
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max
