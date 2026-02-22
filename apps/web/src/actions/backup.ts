@@ -21,6 +21,7 @@ import type {
 import { headers } from "next/headers";
 import type { NextResponse } from "next/server";
 
+import { refreshBootstrapCaches } from "@/actions/cache-bootstrap";
 import { logAuditEvent } from "@/lib/server/audit";
 import { authVerify } from "@/lib/server/auth-verify";
 import {
@@ -483,6 +484,15 @@ export async function importBackup(
         description: `执行备份导入 (${result.scope})`,
       },
     });
+
+    try {
+      await refreshBootstrapCaches();
+    } catch (cacheError) {
+      console.error(
+        "Refresh bootstrap caches after backup import failed:",
+        cacheError,
+      );
+    }
 
     return response.ok({
       data: result,
