@@ -11,6 +11,7 @@ import {
 import type { BlockFormConfig } from "@/blocks/core/types/field-config";
 
 const configCache = new Map<string, BlockFormConfig>();
+let allConfigsCache: BlockFormConfig[] | null = null;
 
 export async function getBlockFormConfig(
   blockType: string,
@@ -32,12 +33,14 @@ export async function getBlockFormConfig(
 }
 
 export async function getAllBlockFormConfigs(): Promise<BlockFormConfig[]> {
-  if (process.env.NODE_ENV !== "development" && configCache.size > 0) {
-    return Array.from(configCache.values());
+  if (process.env.NODE_ENV !== "development" && allConfigsCache) {
+    return allConfigsCache;
   }
 
   const configs = await getAllBlockSchemas();
   if (process.env.NODE_ENV !== "development") {
+    allConfigsCache = configs;
+    configCache.clear();
     configs.forEach((config) => configCache.set(config.blockType, config));
   }
 
