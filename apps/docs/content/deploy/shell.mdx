@@ -1,0 +1,86 @@
+---
+title: 一键部署
+---
+
+使用下面的一行命令，可以在 Linux 服务器上自动完成 NeutralPress 的 Docker 部署。
+
+```bash
+curl -fsSL https://get.neutralpress.net | bash
+```
+
+脚本会自动执行：
+
+1. 下载 `docker-compose.yml` 和 `.env.example`
+2. 创建 `.env`（如果不存在）
+3. 自动生成 `MASTER_SECRET`、`JWT_PRIVATE_KEY`、`JWT_PUBLIC_KEY`（仅在占位符状态时生成）
+4. 如果未安装 Docker，会自动安装 Docker + Docker Compose（仅 Linux）
+5. 执行 `docker compose up -d`
+
+## 前置条件
+
+- 已安装 `openssl`
+- 已安装 `curl` 或 `wget`
+- Linux 环境下可用 root 或 sudo（仅在自动安装 Docker 时需要）
+
+## 常用参数
+
+### 指定安装目录
+
+```bash
+curl -fsSL https://get.neutralpress.net | bash -s -- --workspace /opt/neutralpress
+```
+
+### 指定镜像
+
+```bash
+curl -fsSL https://get.neutralpress.net | bash -s -- --artifact ghcr.io/ravelloh/neutralpress:latest
+```
+
+### 固定仓库版本（分支/Tag/提交）
+
+```bash
+curl -fsSL https://get.neutralpress.net | bash -s -- --channel main
+```
+
+### 仅准备配置，不启动容器
+
+```bash
+curl -fsSL https://get.neutralpress.net | bash -s -- --prepare-only
+```
+
+### 指定网络模式（默认自动检测）
+
+脚本会请求 `https://ip.api.ravelloh.top/`，根据 `country` 字段判断是否中国大陆网络（`CN` 视为中国大陆）。
+
+```bash
+# 强制按中国大陆网络处理
+curl -fsSL https://get.neutralpress.net | bash -s -- --route-profile mainland
+
+# 强制按非中国大陆网络处理
+curl -fsSL https://get.neutralpress.net | bash -s -- --route-profile overseas
+```
+
+### 禁用 Docker 自动安装
+
+```bash
+curl -fsSL https://get.neutralpress.net | bash -s -- --skip-engine-setup
+```
+
+### 使用源码仓库的脚本
+
+https://get.neutralpress.net 使用 Cloudflare Worker 反代下面的 GitHub 仓库文件，用以帮助访问无法访问 raw.githubusercontent.com 的用户。
+
+你也可以直接从 GitHub 仓库获取最新版本的部署脚本：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/RavelloH/NeutralPress/main/scripts/deploy.sh | bash
+```
+
+## 部署后常用命令
+
+```bash
+cd /opt/neutralpress
+docker compose logs -f web
+docker compose down
+docker compose down -v
+```
