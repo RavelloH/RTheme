@@ -28,19 +28,14 @@ export function validateInternalBearerToken(
     return { ok: false, reason: "MASTER_SECRET_UNAVAILABLE" };
   }
 
-  const candidateTokens = [masterSecret];
   try {
-    candidateTokens.push(deriveCacheBootstrapToken(masterSecret));
+    const expectedToken = deriveCacheBootstrapToken(masterSecret);
+    const authorized = isSecureTokenEqual(token, expectedToken);
+    if (!authorized) {
+      return { ok: false, reason: "INVALID_TOKEN" };
+    }
+    return { ok: true };
   } catch {
-    // 忽略派生失败，仍允许使用明文 MASTER_SECRET。
+    return { ok: false, reason: "MASTER_SECRET_UNAVAILABLE" };
   }
-
-  const authorized = candidateTokens.some((candidate) =>
-    isSecureTokenEqual(token, candidate),
-  );
-  if (!authorized) {
-    return { ok: false, reason: "INVALID_TOKEN" };
-  }
-
-  return { ok: true };
 }

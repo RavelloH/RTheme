@@ -732,6 +732,34 @@ export const CONFIG_DEFINITIONS = {
     description: "云端触发 JWT 的 audience 期望值",
   },
   // =====================================
+  // 自动更新
+  // =====================================
+  "autoupdate.mode": {
+    default: "REPOSITORY" as "REPOSITORY" | "CONTAINER",
+    options: [
+      { value: "REPOSITORY", label: "仓库更新" },
+      { value: "CONTAINER", label: "容器更新" },
+    ],
+    description:
+      "自动更新模式。REPOSITORY=同步 GitHub 仓库，CONTAINER=触发容器更新",
+  },
+  "autoupdate.repo.fullName": {
+    default: "",
+    description: "仓库更新模式使用的目标仓库，格式 owner/repo",
+  },
+  "autoupdate.repo.branch": {
+    default: "main",
+    description: "仓库更新模式使用的目标分支",
+  },
+  "autoupdate.repo.pat": {
+    default: "",
+    description: "仓库更新模式使用的 GitHub Personal Access Token",
+  },
+  "autoupdate.watchtower.baseUrl": {
+    default: "http://watchtower:8080/v1/update",
+    description: "容器更新模式调用的 Watchtower HTTP API 地址",
+  },
+  // =====================================
   // AI 集成
   // =====================================
   "ai.enable": {

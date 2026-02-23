@@ -36,6 +36,10 @@ ENV PORT=3000
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PRISMA_CLI_PATH=/app/prisma-runtime/node_modules/prisma/build/index.js
 
+RUN apt-get update -y \
+  && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
 RUN groupadd --system --gid 1001 nodejs && useradd --system --uid 1001 nextjs
 
 # standalone 主体

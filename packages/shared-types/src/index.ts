@@ -28,6 +28,7 @@ export * from "./api/friendlink.js";
 export * from "./api/recycle-bin.js";
 export * from "./api/cron.js";
 export * from "./api/cloud.js";
+export * from "./api/auto-update.js";
 export * from "./api/backup.js";
 
 // 类型安全的 API 客户端工具
