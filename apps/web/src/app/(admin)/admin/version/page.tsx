@@ -350,7 +350,9 @@ export default async function AdminVersionPage() {
   const isFormalBuild = hashMatchedInReleases;
   const isDevBuild = !isFormalBuild;
   const buildStatusLabel = isFormalBuild ? "正式版" : "开发版本";
-  const buildStatusClass = isFormalBuild ? "text-success" : "text-warning";
+  const buildStatusClass = isFormalBuild
+    ? "text-success"
+    : "text-muted-foreground";
 
   const hasUpdate =
     localParsedVersion && latestStableParsedVersion
@@ -422,7 +424,7 @@ export default async function AdminVersionPage() {
                   {versionMatchedRelease ? (
                     <div className="space-y-1">
                       {isDevBuild ? (
-                        <div className="text-warning">
+                        <div className="text-muted-foreground">
                           当前正在使用开发版本。
                         </div>
                       ) : null}
