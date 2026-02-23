@@ -348,8 +348,8 @@ fi
 
 if [[ "$SHOULD_BOOT" == "true" ]]; then
   log "开始拉取镜像并启动容器..."
-  container_exec compose pull
-  container_exec compose up -d
+  container_exec compose pull --ignore-buildable
+  container_exec compose up -d --build
   log "部署完成，默认访问地址: http://localhost:3000"
   log "查看日志: cd \"$WORKSPACE_DIR\" && ${CONTAINER_TOOL[*]} compose logs -f web"
   log "停止容器: cd \"$WORKSPACE_DIR\" && ${CONTAINER_TOOL[*]} compose down"
