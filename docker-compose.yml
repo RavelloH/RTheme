@@ -41,6 +41,8 @@ services:
         condition: service_healthy
     ports:
       - "3000:3000"
+    volumes:
+      - neutralpress-uploads:/var/www/uploads
 
   watchtower:
     build:
@@ -241,3 +243,4 @@ services:
 volumes:
   neutralpress-postgres-data:
   neutralpress-redis-data:
+  neutralpress-uploads:
