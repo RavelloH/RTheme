@@ -335,6 +335,14 @@ else
   download_file "${GATEWAY_URL}/docker-compose.yml" "docker-compose.yml"
 fi
 
+mkdir -p docker
+if [[ "$FORCE_DOWNLOAD" == "true" || ! -f docker/watchtower.Dockerfile ]]; then
+  download_file "${GATEWAY_URL}/docker/watchtower.Dockerfile" "docker/watchtower.Dockerfile"
+fi
+if [[ "$FORCE_DOWNLOAD" == "true" || ! -f docker/watchtower-entrypoint.sh ]]; then
+  download_file "${GATEWAY_URL}/docker/watchtower-entrypoint.sh" "docker/watchtower-entrypoint.sh"
+fi
+
 if [[ ! -f .env ]]; then
   log "正在从网关生成安全的初始环境变量配置..."
   download_file "${GATEWAY_URL}/env" ".env"
