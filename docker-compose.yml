@@ -29,7 +29,7 @@ services:
       retries: 20
 
   web:
-    image: ${NEUTRALPRESS_IMAGE:-ghcr.io/ravelloh/neutralpress:latest}
+    image: $${NEUTRALPRESS_IMAGE:-ghcr.io/ravelloh/neutralpress:latest}
     container_name: neutralpress-web
     restart: unless-stopped
     env_file:
@@ -87,11 +87,11 @@ services:
         const masterSecret = (process.env.MASTER_SECRET || "").trim();
 
         if (!endpoint) {
-          console.error(`${label}: missing BOOTSTRAP_URL`);
+          console.error(`$${label}: missing BOOTSTRAP_URL`);
           process.exit(1);
         }
         if (!masterSecret || masterSecret.length < 32) {
-          console.error(`${label}: MASTER_SECRET is missing or too short`);
+          console.error(`$${label}: MASTER_SECRET is missing or too short`);
           process.exit(1);
         }
 
@@ -113,7 +113,7 @@ services:
               const response = await fetch(endpoint, {
                 method: "POST",
                 headers: {
-                  authorization: `Bearer ${token}`,
+                  authorization: `Bearer $${token}`,
                   "content-type": "application/json",
                 },
                 body: JSON.stringify({
@@ -123,19 +123,19 @@ services:
 
               const body = await response.text();
               if (response.ok) {
-                process.stdout.write(`${body}\n`);
+                process.stdout.write(`$${body}\n`);
                 process.exit(0);
               }
 
               console.error(
-                `${label} attempt ${attempt}/${retries} failed: HTTP ${response.status}`,
+                `$${label} attempt $${attempt}/$${retries} failed: HTTP $${response.status}`,
               );
               if (body) {
                 console.error(body);
               }
             } catch (error) {
               const message = error instanceof Error ? error.message : String(error);
-              console.error(`${label} attempt ${attempt}/${retries} failed: ${message}`);
+              console.error(`$${label} attempt $${attempt}/$${retries} failed: $${message}`);
             }
 
             if (attempt < retries) {
@@ -143,7 +143,7 @@ services:
             }
           }
 
-          console.error(`${label} failed after ${retries} attempts`);
+          console.error(`$${label} failed after $${retries} attempts`);
           process.exit(1);
         })();
         NODE
@@ -177,11 +177,11 @@ services:
         const masterSecret = (process.env.MASTER_SECRET || "").trim();
 
         if (!endpoint) {
-          console.error(`${label}: missing BOOTSTRAP_URL`);
+          console.error(`$${label}: missing BOOTSTRAP_URL`);
           process.exit(1);
         }
         if (!masterSecret || masterSecret.length < 32) {
-          console.error(`${label}: MASTER_SECRET is missing or too short`);
+          console.error(`$${label}: MASTER_SECRET is missing or too short`);
           process.exit(1);
         }
 
@@ -203,7 +203,7 @@ services:
               const response = await fetch(endpoint, {
                 method: "POST",
                 headers: {
-                  authorization: `Bearer ${token}`,
+                  authorization: `Bearer $${token}`,
                   "content-type": "application/json",
                 },
                 body: JSON.stringify({
@@ -213,19 +213,19 @@ services:
 
               const body = await response.text();
               if (response.ok) {
-                process.stdout.write(`${body}\n`);
+                process.stdout.write(`$${body}\n`);
                 process.exit(0);
               }
 
               console.error(
-                `${label} attempt ${attempt}/${retries} failed: HTTP ${response.status}`,
+                `$${label} attempt $${attempt}/$${retries} failed: HTTP $${response.status}`,
               );
               if (body) {
                 console.error(body);
               }
             } catch (error) {
               const message = error instanceof Error ? error.message : String(error);
-              console.error(`${label} attempt ${attempt}/${retries} failed: ${message}`);
+              console.error(`$${label} attempt $${attempt}/$${retries} failed: $${message}`);
             }
 
             if (attempt < retries) {
@@ -233,7 +233,7 @@ services:
             }
           }
 
-          console.error(`${label} failed after ${retries} attempts`);
+          console.error(`$${label} failed after $${retries} attempts`);
           process.exit(1);
         })();
         NODE
