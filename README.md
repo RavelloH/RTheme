@@ -14,9 +14,6 @@ Demo: [https://ravelloh.com](https://ravelloh.com) | Docs: [https://neutralpress
 
 </div>
 
-> [!WARNING]
-> NeutralPress V5 目前仍处于早期开发阶段，尽管目前已经能够自动化更新，但仍建议仅在测试环境中使用。正式版将会很快推出。
-
 ## 简介
 
 NeutralPress 是一个基于 Next.js 的 CMS 系统，其在生态位上与 WordPress 类似，你可以所见即所得的通过强大的后台管理系统来管理你的站点，所有更改都会实时应用。
