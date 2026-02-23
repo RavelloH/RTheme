@@ -29,7 +29,7 @@ services:
       retries: 20
 
   web:
-    image: $${NEUTRALPRESS_IMAGE:-ghcr.io/ravelloh/neutralpress:latest}
+    image: ${NEUTRALPRESS_IMAGE:-ghcr.io/ravelloh/neutralpress:latest}
     container_name: neutralpress-web
     restart: unless-stopped
     env_file:
