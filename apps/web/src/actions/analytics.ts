@@ -65,6 +65,25 @@ const TRACK_PAGE_VIEW_SCRIPT = readFileSync(
   join(process.cwd(), "src/lib/server/lua-scripts/track-page-view.lua"),
   "utf-8",
 );
+const ANALYTICS_FLUSH_LOCK_KEY = "np:analytics:flush:lock";
+const ANALYTICS_FLUSH_LOCK_TTL_MS = 30_000;
+const RELEASE_ANALYTICS_FLUSH_LOCK_SCRIPT =
+  "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) end return 0";
+
+async function releaseAnalyticsFlushLock(lockValue: string): Promise<void> {
+  try {
+    await withRetry(() =>
+      redis.eval(
+        RELEASE_ANALYTICS_FLUSH_LOCK_SCRIPT,
+        1,
+        ANALYTICS_FLUSH_LOCK_KEY,
+        lockValue,
+      ),
+    );
+  } catch (error) {
+    console.error("释放 analytics flush 锁失败:", error);
+  }
+}
 
 /**
  * 处理和规范化 referer
@@ -412,13 +431,35 @@ export async function trackPageView(
 
     // 检查队列长度，是否需要批量写入数据库
     if (queueLength >= BATCH_SIZE) {
-      const { after } = await import("next/server");
-      // 异步执行批量写入，不阻塞响应
-      after(() => {
-        flushEventsToDatabase().catch((error) => {
-          console.error("后台批量写入失败:", error);
-        });
-      });
+      const lockValue = `${Date.now()}:${Math.random().toString(36).slice(2)}`;
+      const flushLockResult = await withRetry(() =>
+        redis.set(
+          ANALYTICS_FLUSH_LOCK_KEY,
+          lockValue,
+          "PX",
+          ANALYTICS_FLUSH_LOCK_TTL_MS,
+          "NX",
+        ),
+      );
+
+      if (flushLockResult === "OK") {
+        try {
+          const { after } = await import("next/server");
+          // 异步执行批量写入，不阻塞响应
+          after(async () => {
+            try {
+              await flushEventsToDatabase();
+            } catch (error) {
+              console.error("后台批量写入失败:", error);
+            } finally {
+              await releaseAnalyticsFlushLock(lockValue);
+            }
+          });
+        } catch (error) {
+          await releaseAnalyticsFlushLock(lockValue);
+          throw error;
+        }
+      }
     }
 
     return response.ok({ message: "追踪成功" });
