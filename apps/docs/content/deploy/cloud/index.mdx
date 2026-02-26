@@ -24,18 +24,8 @@ NeutralPress 在部署时，同时需要 PostgresSQL 和 Redis 两个服务的�
   <Card title="Netlify" href="/docs/deploy/cloud/netlify">
     不支持 PostgresSQL 和 Redis 云服务。另一个流行的 Serverless 平台。
   </Card>
-</Cards>
-
-## Docker 云平台
-
-此外，这些云平台可以使用 Docker 镜像进行部署：
-
-<Cards>
-  <Card title="Zeabur (推荐)" href="/docs/deploy/cloud/zeabur">
-    支持 Docker 部署，限额充足，但需要验证信用卡。
-  </Card>
-  <Card title="Claw Cloud" href="/docs/deploy/cloud/claw">
-    支持 Docker 部署，完全免费，但不太稳定。
+  <Card title="腾讯云 EdgeOne" href="/docs/deploy/cloud/edgeone">
+    不支持 PostgresSQL 和 Redis 云服务。腾讯云推出的免费云函数平台。
   </Card>
 </Cards>
 
@@ -58,11 +48,12 @@ NeutralPress 在部署时，同时需要 PostgresSQL 和 Redis 两个服务的�
 如果你选择的云平台不包含 Redis 服务，你可以单独使用以下平台来获取免费的 Redis 数据库服务：
 
 <Cards>
-  <Card title="Upstash（推荐）" href="/docs/deploy/cloud/upstash">
-    提供免费 Redis 数据库，易于使用且功能强大。限额较高，推荐使用。
+  <Card title="Redis Labs（推荐）" href="/docs/deploy/cloud/redis">
+    专注于 Redis 的云服务，提供免费套餐，只有存储空间的限额。
   </Card>
-  <Card title="Redis Labs" href="/docs/deploy/cloud/redis">
-    专注于 Redis 的云服务，提供免费套餐，但限额较少。
+  <Card title="Upstash" href="/docs/deploy/cloud/upstash">
+    提供免费 Redis
+    数据库，易于使用且功能强大。存储空间限额大，但是限制操作数，容易遇到瓶颈。
   </Card>
 </Cards>
 
