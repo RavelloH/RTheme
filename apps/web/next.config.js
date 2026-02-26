@@ -59,8 +59,8 @@ function getOptimalCpus() {
   const totalMemGB = memBytes / (1024 * 1024 * 1024);
   const logicalCores = osCpus().length;
 
-  // 核心算法：为系统基础运行保留 1GB，剩下的内存按每核 1GB 分配给 Next.js Worker
-  let safeCores = Math.floor((totalMemGB - 1) / 1);
+  // 核心算法：为系统基础运行保留 1GB，剩下的内存按每核 1.5GB 分配给 Next.js Worker
+  let safeCores = Math.floor((totalMemGB - 1) / 1.5);
 
   // 保证至少有 1 个核心工作，且不超过机器的物理/逻辑核心总数
   return Math.max(1, Math.min(safeCores, logicalCores));
