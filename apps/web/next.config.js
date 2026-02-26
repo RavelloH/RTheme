@@ -248,7 +248,7 @@ const nextConfig = () => {
     },
     experimental: {
       optimizePackageImports: ["@remixicon/react"],
-      cpus: SAFE_CPUS,
+      cpus: 1,
       serverActions: {
         bodySizeLimit: "4mb",
       },
