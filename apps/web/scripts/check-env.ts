@@ -27,6 +27,57 @@ function calculateShannonEntropy(str: string): number {
   return entropy;
 }
 
+const PEM_PREFIX = "-----";
+const BASE64_KEY_PATTERN = /^[A-Za-z0-9+/=_-]+$/;
+
+function normalizeJwtKeyFromEnv(value: string): string {
+  const unescaped = value.replace(/\\n/g, "\n").trim();
+  if (!unescaped) {
+    return "";
+  }
+
+  if (unescaped.startsWith(PEM_PREFIX)) {
+    return unescaped;
+  }
+
+  const compact = unescaped.replace(/\s+/g, "");
+  if (!BASE64_KEY_PATTERN.test(compact)) {
+    return unescaped;
+  }
+
+  const normalizedBase64 = compact.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalizedBase64.padEnd(
+    normalizedBase64.length + ((4 - (normalizedBase64.length % 4)) % 4),
+    "=",
+  );
+
+  try {
+    const decoded = Buffer.from(padded, "base64").toString("utf8").trim();
+    if (decoded.startsWith(PEM_PREFIX)) {
+      return decoded;
+    }
+  } catch {
+    // ignore invalid base64
+  }
+
+  return unescaped;
+}
+
+function validatePemKey(
+  value: string,
+  type: "private" | "public",
+): string | null {
+  const normalized = normalizeJwtKeyFromEnv(value);
+  const begin = type === "private" ? "BEGIN PRIVATE KEY" : "BEGIN PUBLIC KEY";
+  const end = type === "private" ? "END PRIVATE KEY" : "END PUBLIC KEY";
+
+  if (!normalized.includes(begin) || !normalized.includes(end)) {
+    return `Should be a valid PEM format ${type} key, or base64-encoded PEM ${type} key`;
+  }
+
+  return null;
+}
+
 // 必需的环境变量配置
 const REQUIRED_ENV_VARS = [
   {
@@ -70,28 +121,12 @@ const REQUIRED_ENV_VARS = [
   {
     name: "JWT_PRIVATE_KEY",
     description: "JWT private key for token signing",
-    validator: (value: string) => {
-      if (
-        !value.includes("BEGIN PRIVATE KEY") ||
-        !value.includes("END PRIVATE KEY")
-      ) {
-        return "Should be a valid PEM format private key";
-      }
-      return null;
-    },
+    validator: (value: string) => validatePemKey(value, "private"),
   },
   {
     name: "JWT_PUBLIC_KEY",
     description: "JWT public key for token verification",
-    validator: (value: string) => {
-      if (
-        !value.includes("BEGIN PUBLIC KEY") ||
-        !value.includes("END PUBLIC KEY")
-      ) {
-        return "Should be a valid PEM format public key";
-      }
-      return null;
-    },
+    validator: (value: string) => validatePemKey(value, "public"),
   },
 ];
 
@@ -211,6 +246,11 @@ export async function checkEnvironmentVariables(): Promise<void> {
     rlog.error(
       '  JWT_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\\n...\\n-----END PUBLIC KEY-----"',
     );
+    rlog.error(
+      "  # Or base64-encoded PEM keys (single line, no newline/tab required):",
+    );
+    rlog.error("  JWT_PRIVATE_KEY=<base64_of_pem_private_key>");
+    rlog.error("  JWT_PUBLIC_KEY=<base64_of_pem_public_key>");
     rlog.error("  # Optional variables:");
     rlog.error("  ENABLE_API=true");
     rlog.error("  DISABLE_ANALYTICS=false");

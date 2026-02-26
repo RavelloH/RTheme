@@ -15,6 +15,42 @@ loadWebEnv();
 
 const rlog = new Rlog();
 
+const PEM_PREFIX = "-----";
+const BASE64_KEY_PATTERN = /^[A-Za-z0-9+/=_-]+$/;
+
+function normalizeJwtKey(value: string): string {
+  const unescaped = value.replace(/\\n/g, "\n").trim();
+  if (!unescaped) {
+    return "";
+  }
+
+  if (unescaped.startsWith(PEM_PREFIX)) {
+    return unescaped;
+  }
+
+  const compact = unescaped.replace(/\s+/g, "");
+  if (!BASE64_KEY_PATTERN.test(compact)) {
+    return unescaped;
+  }
+
+  const normalizedBase64 = compact.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalizedBase64.padEnd(
+    normalizedBase64.length + ((4 - (normalizedBase64.length % 4)) % 4),
+    "=",
+  );
+
+  try {
+    const decoded = Buffer.from(padded, "base64").toString("utf8").trim();
+    if (decoded.startsWith(PEM_PREFIX)) {
+      return decoded;
+    }
+  } catch {
+    // ignore invalid base64
+  }
+
+  return unescaped;
+}
+
 // JWT key pair validation function
 function validateJWTKeyPair(
   privateKeyPem: string,
@@ -100,8 +136,8 @@ function generateJWTKeyPair(): { privateKey: string; publicKey: string } {
 export async function checkJWTKeyPair(): Promise<void> {
   rlog.info("> Checking if JWT key pair is valid...");
 
-  const jwtPrivateKey = process.env.JWT_PRIVATE_KEY!;
-  const jwtPublicKey = process.env.JWT_PUBLIC_KEY!;
+  const jwtPrivateKey = normalizeJwtKey(process.env.JWT_PRIVATE_KEY!);
+  const jwtPublicKey = normalizeJwtKey(process.env.JWT_PUBLIC_KEY!);
 
   const keyPairError = validateJWTKeyPair(jwtPrivateKey, jwtPublicKey);
   if (keyPairError) {
@@ -115,6 +151,14 @@ export async function checkJWTKeyPair(): Promise<void> {
     rlog.log();
     rlog.info('  JWT_PRIVATE_KEY="' + privateKey.replace(/\n/g, "\\n") + '"');
     rlog.info('  JWT_PUBLIC_KEY="' + publicKey.replace(/\n/g, "\\n") + '"');
+    rlog.log();
+    rlog.log("  Or use base64-encoded PEM (single-line env values):");
+    rlog.info(
+      `  JWT_PRIVATE_KEY=${Buffer.from(privateKey, "utf8").toString("base64")}`,
+    );
+    rlog.info(
+      `  JWT_PUBLIC_KEY=${Buffer.from(publicKey, "utf8").toString("base64")}`,
+    );
     rlog.log();
 
     throw new Error(

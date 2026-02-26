@@ -36,6 +36,42 @@ export type TotpTokenPayload = {
 let cachedPrivateKey: KeyObject | null = null;
 let cachedPublicKey: KeyObject | null = null;
 
+const PEM_PREFIX = "-----";
+const BASE64_KEY_PATTERN = /^[A-Za-z0-9+/=_-]+$/;
+
+function normalizeJwtKey(key: string): string {
+  const unescaped = key.replace(/\\n/g, "\n").trim();
+  if (!unescaped) {
+    return "";
+  }
+
+  if (unescaped.startsWith(PEM_PREFIX)) {
+    return unescaped;
+  }
+
+  const compact = unescaped.replace(/\s+/g, "");
+  if (!BASE64_KEY_PATTERN.test(compact)) {
+    return unescaped;
+  }
+
+  const normalizedBase64 = compact.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalizedBase64.padEnd(
+    normalizedBase64.length + ((4 - (normalizedBase64.length % 4)) % 4),
+    "=",
+  );
+
+  try {
+    const decoded = Buffer.from(padded, "base64").toString("utf8").trim();
+    if (decoded.startsWith(PEM_PREFIX)) {
+      return decoded;
+    }
+  } catch {
+    // ignore invalid base64
+  }
+
+  return unescaped;
+}
+
 function getPrivateKey(): KeyObject {
   if (cachedPrivateKey) {
     return cachedPrivateKey;
@@ -47,7 +83,7 @@ function getPrivateKey(): KeyObject {
   }
 
   cachedPrivateKey = createPrivateKey({
-    key,
+    key: normalizeJwtKey(key),
     format: "pem",
   });
   return cachedPrivateKey;
@@ -64,7 +100,7 @@ function getPublicKey(): KeyObject {
   }
 
   cachedPublicKey = createPublicKey({
-    key,
+    key: normalizeJwtKey(key),
     format: "pem",
   });
   return cachedPublicKey;

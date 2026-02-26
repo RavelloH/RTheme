@@ -6,6 +6,8 @@ import { cn } from "@/lib/cn";
 import { useConfigContext, type EnvConfig } from "./context";
 import { CodeBlock, Pre } from "fumadocs-ui/components/codeblock";
 
+export type ConfigFormOutputMode = "escaped" | "base64";
+
 // 单个字段输入组件（用于表单内部）
 function ConfigField({
   label,
@@ -122,7 +124,27 @@ export function InlineField({ label }: { label: keyof EnvConfig }) {
 }
 
 // 格式化生成的环境变量
-function formatEnvContent(config: EnvConfig): string {
+function toBase64(value: string): string {
+  const bytes = new TextEncoder().encode(value);
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary);
+}
+
+function formatJwtKey(value: string, outputMode: ConfigFormOutputMode): string {
+  if (outputMode === "base64") {
+    return toBase64(value);
+  }
+
+  return value.replace(/\n/g, "\\n");
+}
+
+function formatEnvContent(
+  config: EnvConfig,
+  outputMode: ConfigFormOutputMode = "escaped",
+): string {
   const lines: string[] = [];
 
   // Database
@@ -143,9 +165,11 @@ function formatEnvContent(config: EnvConfig): string {
   // JWT
   lines.push("# JWT");
   lines.push(
-    `JWT_PRIVATE_KEY="${config.JWT_PRIVATE_KEY.replace(/\n/g, "\\n")}"`,
+    `JWT_PRIVATE_KEY="${formatJwtKey(config.JWT_PRIVATE_KEY, outputMode)}"`,
   );
-  lines.push(`JWT_PUBLIC_KEY="${config.JWT_PUBLIC_KEY.replace(/\n/g, "\\n")}"`);
+  lines.push(
+    `JWT_PUBLIC_KEY="${formatJwtKey(config.JWT_PUBLIC_KEY, outputMode)}"`,
+  );
   lines.push("");
 
   // Language
@@ -156,7 +180,11 @@ function formatEnvContent(config: EnvConfig): string {
 }
 
 // 主体配置表单组件
-export function MainConfigForm() {
+export function MainConfigForm({
+  output = "escaped",
+}: {
+  output?: ConfigFormOutputMode;
+}) {
   const { config, errors, validateAll, generateMissing } = useConfigContext();
   const [generated, setGenerated] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -170,13 +198,13 @@ export function MainConfigForm() {
   };
 
   const handleCopy = () => {
-    const envContent = formatEnvContent(config);
+    const envContent = formatEnvContent(config, output);
     navigator.clipboard.writeText(envContent);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const envContent = generated ? formatEnvContent(config) : "";
+  const envContent = generated ? formatEnvContent(config, output) : "";
   const hasErrors = errors.length > 0;
   const isReady = config.DATABASE_URL && config.REDIS_URL;
 
@@ -295,12 +323,18 @@ export function MainConfigForm() {
 }
 
 // 主组件
-export default function ConfigForm({ label }: { label?: keyof EnvConfig }) {
+export default function ConfigForm({
+  label,
+  output = "escaped",
+}: {
+  label?: keyof EnvConfig;
+  output?: ConfigFormOutputMode;
+}) {
   // 如果指定了 label，显示单个字段
   if (label) {
     return <InlineField label={label} />;
   }
 
   // 否则显示完整的配置表单
-  return <MainConfigForm />;
+  return <MainConfigForm output={output} />;
 }
