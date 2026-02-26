@@ -1,7 +1,7 @@
 generator client {
   provider      = "prisma-client-js"
   output        = "../node_modules/.prisma/client"
-  binaryTargets = ["native"]
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
@@ -260,9 +260,9 @@ model Comment {
 
   // 关系
   postId Int?
-  post   Post? @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post   Post?   @relation(fields: [postId], references: [id], onDelete: Cascade)
   pageId String?
-  page   Page? @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  page   Page?   @relation(fields: [pageId], references: [id], onDelete: Cascade)
 
   // 登录用户评论
   userUid       Int?
@@ -868,18 +868,18 @@ model CronHistory {
 }
 
 model CloudTriggerHistory {
-  id         Int      @id @default(autoincrement())
-  deliveryId String   @unique @db.VarChar(80)
+  id         Int    @id @default(autoincrement())
+  deliveryId String @unique @db.VarChar(80)
 
   requestedAt DateTime?
-  receivedAt  DateTime @default(now())
+  receivedAt  DateTime  @default(now())
 
-  triggerType CronTriggerType
-  verifyOk    Boolean
-  verifySource String? @db.VarChar(16)
+  triggerType  CronTriggerType
+  verifyOk     Boolean
+  verifySource String?         @db.VarChar(16)
 
-  accepted Boolean @default(false)
-  dedupHit Boolean @default(false)
+  accepted Boolean            @default(false)
+  dedupHit Boolean            @default(false)
   status   CloudTriggerStatus
 
   message       String? @db.VarChar(500)
@@ -946,7 +946,7 @@ model MailSubscription {
   verifiedAt           DateTime?
 
   // 退订链接失效控制（每次退订后 +1）
-  unsubscribeVersion Int      @default(1)
+  unsubscribeVersion Int       @default(1)
   unsubscribedAt     DateTime?
 
   // 记录上次已发送的文章
