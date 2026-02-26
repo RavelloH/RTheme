@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import { createRequire } from "node:module";
-import { cpus as osCpus } from "node:os";
+import { cpus as osCpus, totalmem as osTotalMem } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -31,6 +31,43 @@ function loadEnvFromDirectory(dir, envFiles) {
     });
   }
 }
+
+function getOptimalCpus() {
+  let memBytes = osTotalMem();
+
+  // 尝试读取 Linux 容器 (cgroup) 的真实内存限制，防止在 EdgeOne/Docker 中读取到宿主机假内存
+  try {
+    if (fs.existsSync("/sys/fs/cgroup/memory.max")) {
+      // Cgroup v2
+      const max = fs.readFileSync("/sys/fs/cgroup/memory.max", "utf8").trim();
+      if (max !== "max") memBytes = Math.min(memBytes, parseInt(max, 10));
+    } else if (fs.existsSync("/sys/fs/cgroup/memory/memory.limit_in_bytes")) {
+      // Cgroup v1
+      const limit = fs
+        .readFileSync("/sys/fs/cgroup/memory/memory.limit_in_bytes", "utf8")
+        .trim();
+      const limitInt = parseInt(limit, 10);
+      // 忽略没有设置限制时的极大值
+      if (limitInt > 0 && limitInt < 100 * 1024 * 1024 * 1024) {
+        memBytes = Math.min(memBytes, limitInt);
+      }
+    }
+  } catch {
+    // 读取失败则静默回退到 osTotalMem
+  }
+
+  const totalMemGB = memBytes / (1024 * 1024 * 1024);
+  const logicalCores = osCpus().length;
+
+  // 核心算法：为系统基础运行保留 1GB，剩下的内存按每核 1GB 分配给 Next.js Worker
+  let safeCores = Math.floor((totalMemGB - 1) / 1);
+
+  // 保证至少有 1 个核心工作，且不超过机器的物理/逻辑核心总数
+  return Math.max(1, Math.min(safeCores, logicalCores));
+}
+
+// 提前计算好安全核心数
+const SAFE_CPUS = getOptimalCpus();
 
 function loadMonorepoEnv() {
   const nodeEnv = globalThis.process.env.NODE_ENV ?? "development";
@@ -211,7 +248,7 @@ const nextConfig = () => {
     },
     experimental: {
       optimizePackageImports: ["@remixicon/react"],
-      cpus: osCpus().length,
+      cpus: SAFE_CPUS,
       serverActions: {
         bodySizeLimit: "4mb",
       },
