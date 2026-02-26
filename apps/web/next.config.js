@@ -247,7 +247,6 @@ const nextConfig = () => {
       "/**/*": tracingIncludes,
     },
     experimental: {
-      optimizePackageImports: ["@remixicon/react"],
       cpus: 1,
       serverActions: {
         bodySizeLimit: "4mb",
