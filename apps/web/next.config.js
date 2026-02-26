@@ -237,7 +237,7 @@ const nextConfig = () => {
     outputFileTracingRoot: repoRootDir,
     serverExternalPackages,
     cacheComponents: true,
-    // reactCompiler: true,
+    reactCompiler: true,
     outputFileTracingIncludes: {
       "/api/**/*": tracingIncludes,
       "/internal/runtime/init": tracingIncludes,
@@ -247,7 +247,7 @@ const nextConfig = () => {
       "/**/*": tracingIncludes,
     },
     experimental: {
-      cpus: 1,
+      cpus: SAFE_CPUS,
       serverActions: {
         bodySizeLimit: "4mb",
       },
