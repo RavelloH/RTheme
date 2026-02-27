@@ -485,7 +485,7 @@ export default function ArchiveCalendarBlock({ block }: BlockComponentProps) {
   // 热力图颜色（按天）
   const getHeatmapColorByDay = (count: number) => {
     if (count === 0) return "bg-muted/30";
-    if (count < 0) return "bg-transparent"; // 空位
+    if (count < 0) return "bg-transparent";
     const intensity = count / maxDayCount;
     if (intensity < 0.25) return "bg-primary/30";
     if (intensity < 0.5) return "bg-primary/50";

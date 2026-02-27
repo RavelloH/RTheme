@@ -165,9 +165,9 @@ function renderProjectCard(project: FeaturedProjectItem, index: number) {
 
         <div className="absolute bottom-0 left-0 right-0 z-10 p-8 md:p-12 pointer-events-none">
           {/* 标题 - hover时显示下划线 */}
-          <h3 className="text-4xl md:text-6xl leading-tight">
+          <h3 className="text-4xl md:text-6xl leading-tight text-foreground">
             <span
-              className="relative inline bg-[linear-gradient(white,white)] bg-left-bottom bg-no-repeat bg-[length:0%_2px] transition-[background-size] duration-300 ease-out group-hover:bg-[length:100%_2px]"
+              className="relative inline bg-[linear-gradient(currentColor,currentColor)] bg-left-bottom bg-no-repeat bg-[length:0%_2px] transition-[background-size] duration-300 ease-out group-hover:bg-[length:100%_2px]"
               data-fade-char
             >
               {project.title}

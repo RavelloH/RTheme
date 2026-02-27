@@ -104,7 +104,7 @@ export default function AdjacentPostCard({
 
         {/* 中部：标题 (增加垂直间距替代分隔线) */}
         <div className="py-4">
-          <h3 className="text-lg md:text-xl font-bold leading-tight tracking-tight text-foreground line-clamp-2 relative inline box-decoration-clone bg-[linear-gradient(white,white)] bg-left-bottom bg-no-repeat bg-[length:0%_2px] transition-[background-size] duration-300 ease-out group-hover:bg-[length:100%_2px]  ">
+          <h3 className="text-lg md:text-xl font-bold leading-tight tracking-tight text-foreground line-clamp-2 relative inline box-decoration-clone bg-[linear-gradient(currentColor,currentColor)] bg-left-bottom bg-no-repeat bg-[length:0%_2px] transition-[background-size] duration-300 ease-out group-hover:bg-[length:100%_2px]  ">
             {title}
           </h3>
         </div>

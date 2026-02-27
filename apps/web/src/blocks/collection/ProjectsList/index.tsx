@@ -119,7 +119,7 @@ function ProjectImageBlock({
       >
         <h3 className="text-4xl md:text-5xl leading-tight text-foreground">
           <span
-            className="relative inline bg-[linear-gradient(white,white)] bg-left-bottom bg-no-repeat bg-[length:0%_2px] transition-[background-size] duration-300 ease-out group-hover:bg-[length:100%_2px]"
+            className="relative inline bg-[linear-gradient(currentColor,currentColor)] bg-left-bottom bg-no-repeat bg-[length:0%_2px] transition-[background-size] duration-300 ease-out group-hover:bg-[length:100%_2px]"
             data-fade-char
           >
             {title}

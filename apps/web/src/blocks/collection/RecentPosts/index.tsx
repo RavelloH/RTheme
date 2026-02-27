@@ -148,7 +148,7 @@ export default function PostsBlock({ block }: BlockComponentProps) {
             className="flex items-center justify-between group px-10 py-15 h-full"
           >
             <div className="block" data-line-reveal>
-              <div className="text-4xl relative inline box-decoration-clone bg-[linear-gradient(white,white)] bg-left-bottom bg-no-repeat bg-[length:0%_2px] transition-[background-size] duration-300 ease-out group-hover:bg-[length:100%_2px]">
+              <div className="text-4xl text-foreground relative inline box-decoration-clone bg-[linear-gradient(currentColor,currentColor)] bg-left-bottom bg-no-repeat bg-[length:0%_2px] transition-[background-size] duration-300 ease-out group-hover:bg-[length:100%_2px]">
                 {replacePlaceholders(footerTitle)}
               </div>
               {footerDesc && (
