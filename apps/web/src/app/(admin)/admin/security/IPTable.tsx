@@ -303,27 +303,21 @@ export default function IPTable() {
       key: "country",
       title: "国家",
       render: (_, record) => (
-        <span className="text-muted-foreground text-xs truncate max-w-[100px]">
-          {record.country || "-"}
-        </span>
+        <span className="text-muted-foreground">{record.country || "-"}</span>
       ),
     },
     {
       key: "province",
       title: "省份",
       render: (_, record) => (
-        <span className="text-muted-foreground text-xs truncate max-w-[100px]">
-          {record.province || "-"}
-        </span>
+        <span className="text-muted-foreground">{record.province || "-"}</span>
       ),
     },
     {
       key: "city",
       title: "城市",
       render: (_, record) => (
-        <span className="text-muted-foreground text-xs truncate max-w-[100px]">
-          {record.city || "-"}
-        </span>
+        <span className="text-muted-foreground">{record.city || "-"}</span>
       ),
     },
     {
