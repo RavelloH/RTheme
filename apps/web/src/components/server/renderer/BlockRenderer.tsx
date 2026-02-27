@@ -1,4 +1,5 @@
 import React from "react";
+import dynamic from "next/dynamic";
 
 import { loadBlockComponent } from "@/blocks/core/catalog";
 import type {
@@ -11,31 +12,27 @@ import HorizontalScrollAnimationWrapper, {
 
 const componentCache = new Map<
   string,
-  Promise<React.ComponentType<BlockComponentProps>>
+  React.ComponentType<BlockComponentProps>
 >();
 
 function EmptyBlock() {
   return null;
 }
 
-async function getBlockComponent(
+function getBlockComponent(
   type: string,
-): Promise<React.ComponentType<BlockComponentProps>> {
+): React.ComponentType<BlockComponentProps> {
   if (componentCache.has(type)) {
     return componentCache.get(type)!;
   }
 
-  const componentPromise = loadBlockComponent(type)
-    .then((loaded) => loaded || EmptyBlock)
-    .catch((error) => {
-      if (process.env.NODE_ENV === "development") {
-        console.warn(`[BlockRenderer] Failed to load block: ${type}`, error);
-      }
-      return EmptyBlock;
-    });
+  const Component = dynamic(async () => {
+    const loaded = await loadBlockComponent(type);
+    return loaded || EmptyBlock;
+  }) as React.ComponentType<BlockComponentProps>;
 
-  componentCache.set(type, componentPromise);
-  return componentPromise;
+  componentCache.set(type, Component);
+  return Component;
 }
 
 interface BlockRendererProps {
@@ -43,27 +40,25 @@ interface BlockRendererProps {
   horizontalAnimation?: HorizontalScrollAnimationFeatureProps;
 }
 
-export default async function BlockRenderer({
+export default function BlockRenderer({
   blocks = [],
   horizontalAnimation,
 }: BlockRendererProps) {
   if (!blocks.length) return null;
 
-  const blockEntries = await Promise.all(
-    blocks.map(async (block, index) => {
-      const type = block.block || "default";
-      const Component = await getBlockComponent(type);
-      return {
-        block,
-        index,
-        Component,
-      };
-    }),
-  );
-
   return (
     <>
-      {blockEntries.map(({ block, index, Component }) => {
+      {blocks.map((block, index) => {
+        const type = block.block || "default";
+        const Component = getBlockComponent(type);
+
+        if (!Component) {
+          if (process.env.NODE_ENV === "development") {
+            console.warn(`[BlockRenderer] Unknown block: ${block.block}`);
+          }
+          return null;
+        }
+
         const key = block.id ?? index;
 
         if (!horizontalAnimation) {
