@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+const EDGE_FADE_PX = 24;
 
 export default function ScrollGradientMask({
   children,
@@ -48,21 +50,36 @@ export default function ScrollGradientMask({
     };
   }, [updateGradient, children]);
 
+  const maskImage = useMemo(() => {
+    if (showTopGradient && showBottomGradient) {
+      return `linear-gradient(to bottom, transparent 0px, black ${EDGE_FADE_PX}px, black calc(100% - ${EDGE_FADE_PX}px), transparent 100%)`;
+    }
+    if (showTopGradient) {
+      return `linear-gradient(to bottom, transparent 0px, black ${EDGE_FADE_PX}px, black 100%)`;
+    }
+    if (showBottomGradient) {
+      return `linear-gradient(to bottom, black 0px, black calc(100% - ${EDGE_FADE_PX}px), transparent 100%)`;
+    }
+    return null;
+  }, [showBottomGradient, showTopGradient]);
+
+  const maskStyle = maskImage
+    ? {
+        WebkitMaskImage: maskImage,
+        maskImage,
+        WebkitMaskRepeat: "no-repeat",
+        maskRepeat: "no-repeat",
+        WebkitMaskSize: "100% 100%",
+        maskSize: "100% 100%",
+      }
+    : undefined;
+
   return (
     <div className="relative h-full min-h-0">
       <div
-        className={`absolute top-0 left-0 right-2 h-6 bg-gradient-to-b from-background via-background/80 to-transparent pointer-events-none z-10 transition-opacity duration-300 ${
-          showTopGradient ? "opacity-100" : "opacity-0"
-        }`}
-      />
-      <div
-        className={`absolute bottom-0 left-0 right-2 h-6 bg-gradient-to-t from-background via-background/80 to-transparent pointer-events-none z-10 transition-opacity duration-300 ${
-          showBottomGradient ? "opacity-100" : "opacity-0"
-        }`}
-      />
-      <div
         ref={scrollRef}
         onScroll={updateGradient}
+        style={maskStyle}
         className={`h-full min-h-0 overflow-y-auto pr-2 ${className}`}
       >
         {children}
