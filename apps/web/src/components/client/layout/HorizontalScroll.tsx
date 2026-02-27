@@ -32,6 +32,7 @@ interface LastBroadcastState {
 
 const POSITION_EPSILON = 0.5;
 const PROGRESS_EPSILON = 0.0005;
+const FORCE_VERTICAL_SCROLL_ATTRIBUTE = "data-force-vertical-scroll";
 const VERTICAL_SCROLLABLE_OVERFLOW_VALUES = new Set([
   "auto",
   "scroll",
@@ -62,6 +63,9 @@ function shouldIgnoreHorizontalWheelByNestedScroll(
   let element: HTMLElement | null = target;
 
   while (element && element !== boundary) {
+    if (element.hasAttribute(FORCE_VERTICAL_SCROLL_ATTRIBUTE)) {
+      return true;
+    }
     if (isElementVerticallyScrollable(element, cache)) {
       const isScrollingDown = deltaY > 0;
       const isScrollingUp = deltaY < 0;
