@@ -86,15 +86,15 @@ export default function ProjectsBlock({ block }: BlockComponentProps) {
         )}
 
         <div className="p-15 absolute inset-0 z-10 flex flex-col justify-end">
-          <div className="text-5xl text-white">
+          <div className="text-5xl text-foreground">
             <span
-              className="relative inline bg-[linear-gradient(white,white)] bg-left-bottom bg-no-repeat bg-[length:0%_2px] transition-[background-size] duration-300 ease-out group-hover:bg-[length:100%_2px]"
+              className="relative inline bg-[linear-gradient(currentColor,currentColor)] bg-left-bottom bg-no-repeat bg-[length:0%_2px] transition-[background-size] duration-300 ease-out group-hover:bg-[length:100%_2px]"
               data-fade-char
             >
               {title}
             </span>
           </div>
-          <div className="text-2xl text-white line-clamp-1 pt-2" data-fade>
+          <div className="text-2xl text-foreground line-clamp-1 pt-2" data-fade>
             {project?.description || fallbackDescription}
           </div>
         </div>

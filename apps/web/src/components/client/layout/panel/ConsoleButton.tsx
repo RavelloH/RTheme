@@ -146,7 +146,7 @@ export function ConsoleButton() {
           >
             <ControlCenterIcon
               isConsoleOpen={isConsoleOpen}
-              className="absolute transition-colors duration-200 group-hover:text-white group-hover:cursor-pointer"
+              className="absolute transition-colors duration-200 group-hover:text-foreground group-hover:cursor-pointer"
             />
           </motion.div>
         </button>

@@ -772,19 +772,19 @@ export default function GridTable<T extends Record<string, unknown>>({
                     onChange={(e) => setSearchValue(e.target.value)}
                     className="
                   relative w-full bg-transparent border-0
-                  px-0 py-2 text-base text-white
+                  px-0 py-2 text-base text-foreground
                   focus:outline-none
                 "
                   />
                   {/* 底部横线 */}
                   <motion.div
                     className="absolute bottom-0 left-0 h-0.5 w-full"
-                    initial={{ backgroundColor: "#ffffff" }}
+                    initial={{ backgroundColor: "var(--color-foreground)" }}
                     animate={{
                       backgroundColor:
                         searchValue.length > 0
                           ? "var(--color-primary)"
-                          : "#ffffff",
+                          : "var(--color-foreground)",
                     }}
                     transition={{
                       duration: 0.3,
@@ -792,7 +792,7 @@ export default function GridTable<T extends Record<string, unknown>>({
                   />
                   {/* Label - 固定位置，有输入时隐藏 */}
                   <motion.label
-                    className="absolute top-2 left-0 pointer-events-none whitespace-nowrap flex items-center text-base text-white"
+                    className="absolute top-2 left-0 pointer-events-none whitespace-nowrap flex items-center text-base text-foreground"
                     animate={{
                       opacity: searchValue.length > 0 ? 0 : 1,
                     }}
@@ -815,7 +815,7 @@ export default function GridTable<T extends Record<string, unknown>>({
                           ease: [0.68, -0.55, 0.265, 1.55],
                         }}
                         onClick={() => setSearchValue("")}
-                        className="absolute right-0 top-2 text-primary hover:text-white transition-colors cursor-pointer flex items-center"
+                        className="absolute right-0 top-2 text-primary hover:text-foreground transition-colors cursor-pointer flex items-center"
                         type="button"
                       >
                         <RiCloseLine size="1em" />

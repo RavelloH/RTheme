@@ -330,7 +330,7 @@ export const TotpDialogs = React.forwardRef<TotpDialogsRef, TotpDialogsProps>(
                 </h3>
                 <p className="text-sm text-muted-foreground mt-2">
                   每个备份码只能使用一次。请将这些备份码保存在安全的地方。
-                  <span className="font-bold text-white">
+                  <span className="font-bold text-foreground">
                     这些代码只会显示一次。
                   </span>
                 </p>

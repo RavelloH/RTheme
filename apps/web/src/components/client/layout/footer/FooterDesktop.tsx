@@ -109,7 +109,7 @@ export default function FooterDesktop({ menus }: FooterProps) {
     if (!linkElement || isActive) return;
 
     gsap.to(linkElement, {
-      color: "#ffffff",
+      color: "var(--color-foreground)",
       duration: 0.3,
       ease: "power2.out",
     });
@@ -228,7 +228,7 @@ export default function FooterDesktop({ menus }: FooterProps) {
       tl.to(
         toLink,
         {
-          color: "#ffffff",
+          color: "var(--color-foreground)",
           duration: 0.4,
           ease: "power3.out",
         },
@@ -267,7 +267,7 @@ export default function FooterDesktop({ menus }: FooterProps) {
       tl.to(
         toLink,
         {
-          color: "#ffffff",
+          color: "var(--color-foreground)",
           duration: 0.4,
           ease: "power3.out",
         },
@@ -325,7 +325,7 @@ export default function FooterDesktop({ menus }: FooterProps) {
         }
 
         if (activeLink) {
-          gsap.set(activeLink, { color: "#ffffff" });
+          gsap.set(activeLink, { color: "var(--color-foreground)" });
         }
       }
       setActivePathname(pathname);
@@ -455,14 +455,14 @@ export default function FooterDesktop({ menus }: FooterProps) {
               return (
                 <span
                   key={menu.id}
-                  className={`mx-6 relative ${isActive ? "text-white" : ""}`}
+                  className={`mx-6 relative ${isActive ? "text-foreground" : ""}`}
                 >
                   <Link
                     ref={(el) => {
                       menuRefs.current[index] = el;
                       // 初始化时设置激活状态的颜色
                       if (isActive && el) {
-                        gsap.set(el, { color: "#ffffff" });
+                        gsap.set(el, { color: "var(--color-foreground)" });
                       }
                     }}
                     href={
@@ -485,7 +485,7 @@ export default function FooterDesktop({ menus }: FooterProps) {
             })}
             {/* 单个共享的下划线 */}
             <span
-              className="absolute bottom-0 left-0 h-px bg-white opacity-0 w-0"
+              className="absolute bottom-0 left-0 h-px bg-foreground opacity-0 w-0"
               ref={underlineRef}
             />
           </div>

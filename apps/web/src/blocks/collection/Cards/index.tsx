@@ -376,7 +376,7 @@ export default function CardsBlock({ block }: BlockComponentProps) {
     const contentClasses = `
       flex-1 flex flex-col  ${getHoverClasses()} ${PADDING_CLASSES[padding]}
       ${ALIGN_CLASSES[align]} ${VERTICAL_ALIGN_CLASSES[verticalAlign]}
-      ${isImageBackground ? "relative z-20 text-white" : "relative"}
+      ${isImageBackground ? "relative z-20 text-foreground" : "relative"}
     `;
 
     return (
@@ -417,7 +417,7 @@ export default function CardsBlock({ block }: BlockComponentProps) {
         {description && (
           <p
             className={`mt-3 ${DESC_SIZE_CLASSES[descriptionSize]} ${
-              isImageBackground ? "text-white/80" : "text-muted-foreground"
+              isImageBackground ? "text-foreground/80" : "text-muted-foreground"
             } ${bgColor === "primary" && "text-primary-foreground"}`}
             {...(enableTextAnimation ? { "data-line-reveal": true } : {})}
           >

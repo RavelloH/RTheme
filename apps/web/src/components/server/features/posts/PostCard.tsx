@@ -110,15 +110,15 @@ export default function PostCard({
 
       {/* 内容区域 */}
       <div className="relative z-20 pl-10 pr-12 h-full flex flex-col justify-center pointer-events-none">
-        <div className="text-3xl text-white group-hover:text-white transition-colors duration-300 relative">
+        <div className="text-3xl text-foreground group-hover:text-foreground transition-colors duration-300 relative">
           <h2
-            className="relative inline box-decoration-clone bg-[linear-gradient(white,white)] bg-left-bottom bg-no-repeat bg-[length:0%_2px] transition-[background-size] duration-300 ease-out group-hover:bg-[length:100%_2px]"
+            className="relative inline box-decoration-clone bg-[linear-gradient(currentColor,currentColor)] bg-left-bottom bg-no-repeat bg-[length:0%_2px] transition-[background-size] duration-300 ease-out group-hover:bg-[length:100%_2px]"
             data-fade-char
           >
             {title}
           </h2>
         </div>
-        <div className="text-xl py-2 flex items-center flex-nowrap min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-white/90">
+        <div className="text-xl py-2 flex items-center flex-nowrap min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-foreground/90">
           {date && (
             <span
               className="flex shrink-0 items-center gap-1 pr-3 whitespace-nowrap"
@@ -139,7 +139,7 @@ export default function PostCard({
                   <span key={cat.slug}>
                     <Link
                       href={`/categories/${cat.slug}`}
-                      className="hover:text-primary transition-colors text-white pointer-events-auto relative z-30"
+                      className="hover:text-primary transition-colors text-foreground pointer-events-auto relative z-30"
                       data-fade
                     >
                       {cat.name}
@@ -167,7 +167,7 @@ export default function PostCard({
                           <span key={tag.slug}>
                             <Link
                               href={`/tags/${tag.slug}`}
-                              className="hover:text-primary transition-colors text-white pointer-events-auto relative z-30"
+                              className="hover:text-primary transition-colors text-foreground pointer-events-auto relative z-30"
                             >
                               #{tag.name}
                             </Link>
@@ -212,7 +212,7 @@ export default function PostCard({
                       <span key={tag.slug}>
                         <Link
                           href={`/tags/${tag.slug}`}
-                          className="hover:text-primary transition-colors text-white pointer-events-auto relative z-30"
+                          className="hover:text-primary transition-colors text-foreground pointer-events-auto relative z-30"
                         >
                           #{tag.name}
                         </Link>
@@ -239,14 +239,14 @@ export default function PostCard({
         {/* 移动版：标签和摘要同时显示 */}
         <div className="md:hidden">
           {tags?.length !== 0 && (
-            <div className="text-xl text-white/90 h-8">
+            <div className="text-xl text-foreground/90 h-8">
               <span className="flex items-center gap-1">
                 <RiPriceTagLine size={"1em"} data-fade />
                 {tags?.map((tag, index) => (
                   <span key={tag.slug}>
                     <Link
                       href={`/tags/${tag.slug}`}
-                      className="hover:text-primary transition-colors text-white pointer-events-auto relative z-30"
+                      className="hover:text-primary transition-colors text-foreground pointer-events-auto relative z-30"
                       data-fade
                     >
                       #{tag.name}
@@ -258,7 +258,7 @@ export default function PostCard({
             </div>
           )}
           {summary && (
-            <div className="text-lg text-white/90 pt-2">
+            <div className="text-lg text-foreground/90 pt-2">
               <div className="line-clamp-1" data-fade>
                 {summary}
               </div>
@@ -271,7 +271,7 @@ export default function PostCard({
           {summary && tags?.length !== 0 ? (
             <>
               <div
-                className={`text-xl text-white/90 absolute inset-0 transition-all duration-300 ${
+                className={`text-xl text-foreground/90 absolute inset-0 transition-all duration-300 ${
                   showAll
                     ? "opacity-0"
                     : "group-hover:opacity-0 group-hover:-translate-y-2"
@@ -283,7 +283,7 @@ export default function PostCard({
                     <span key={tag.slug}>
                       <Link
                         href={`/tags/${tag.slug}`}
-                        className="hover:text-primary transition-colors text-white pointer-events-auto relative z-30"
+                        className="hover:text-primary transition-colors text-foreground pointer-events-auto relative z-30"
                         data-fade
                       >
                         #{tag.name}
@@ -294,7 +294,7 @@ export default function PostCard({
                 </span>
               </div>
               <div
-                className={`text-xl text-white/90 absolute inset-0 transition-all duration-300 ${
+                className={`text-xl text-foreground/90 absolute inset-0 transition-all duration-300 ${
                   showAll
                     ? "opacity-100"
                     : "opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0"
@@ -306,14 +306,14 @@ export default function PostCard({
               </div>
             </>
           ) : !summary && tags?.length !== 0 ? (
-            <div className="text-xl text-white/90">
+            <div className="text-xl text-foreground/90">
               <span className="flex items-center gap-1">
                 <RiPriceTagLine size={"1em"} data-fade />
                 {tags?.map((tag, index) => (
                   <span key={tag.slug}>
                     <Link
                       href={`/tags/${tag.slug}`}
-                      className="hover:text-primary transition-colors text-white pointer-events-auto relative z-30"
+                      className="hover:text-primary transition-colors text-foreground pointer-events-auto relative z-30"
                       data-fade
                     >
                       #{tag.name}
@@ -324,7 +324,7 @@ export default function PostCard({
               </span>
             </div>
           ) : summary && !tags?.length ? (
-            <div className="text-xl text-white/90">
+            <div className="text-xl text-foreground/90">
               <div className="line-clamp-1" data-fade>
                 {summary}
               </div>

@@ -107,7 +107,7 @@ function getTextColorClass(color?: string): string {
 }
 
 function getImageTextColorClass(color?: string): string {
-  if (!color || color === "default") return "text-white";
+  if (!color || color === "default") return "text-foreground";
   return getTextColorClass(color);
 }
 

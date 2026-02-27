@@ -740,14 +740,14 @@ export default function MediaSelector({
               <div className="absolute inset-0 bg-background/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                 <Tooltip content="编辑">
                   <Clickable onClick={openDialog} hoverScale={1.1}>
-                    <div className="p-3 bg-foreground/10 hover:bg-foreground/50 rounded-lg text-white transition-all">
+                    <div className="p-3 bg-foreground/10 hover:bg-foreground/50 rounded-lg text-foreground hover:text-background transition-all">
                       <RiEditLine size="1.5em" />
                     </div>
                   </Clickable>
                 </Tooltip>
                 <Tooltip content="清除">
                   <Clickable onClick={handleClear} hoverScale={1.1}>
-                    <div className="p-3 bg-error/40 hover:bg-error/80 rounded-lg text-white transition-all">
+                    <div className="p-3 bg-error/40 hover:bg-error/80 rounded-lg text-foreground hover:text-background transition-all">
                       <RiCloseLine size="1.5em" />
                     </div>
                   </Clickable>

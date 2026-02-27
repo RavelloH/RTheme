@@ -138,7 +138,7 @@ function MenuButton({
           width="2em"
           height="2em"
           viewBox="0 0 24 24"
-          className="absolute transition-colors duration-200 group-hover:text-white group-hover:cursor-pointer"
+          className="absolute transition-colors duration-200 group-hover:text-foreground group-hover:cursor-pointer"
           fill="none"
         >
           <motion.path
