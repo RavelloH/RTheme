@@ -37,7 +37,7 @@ export default function Layout({ children }: LayoutProps<"/">) {
       <Script
         defer
         src="https://analytics.ravelloh.top/script.js"
-        data-website-id="3bdb8aab-a272-4cea-8193-63d8e03daac9"
+        data-website-id="72199c18-30da-47fe-9988-2a3eef3446c0"
       ></Script>
     </html>
   );
