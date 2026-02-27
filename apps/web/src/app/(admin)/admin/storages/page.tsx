@@ -48,11 +48,11 @@ export default async function AdminStorages() {
               <div>
                 详细配置指南，请参阅文档：
                 <Link
-                  href="https://neutralpress.net/docs/storage"
+                  href="https://neutralpress.net/docs/settings/storage"
                   className="text-primary ml-auto"
                   presets={["hover-underline", "arrow-out"]}
                 >
-                  https://neutralpress.net/docs/storage
+                  https://neutralpress.net/docs/settings/storage
                 </Link>
               </div>
             </div>

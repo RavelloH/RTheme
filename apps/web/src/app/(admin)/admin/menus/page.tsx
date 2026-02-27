@@ -49,11 +49,11 @@ export default async function AdminMenus() {
               <div>
                 详细设置指南，请参阅文档：
                 <Link
-                  href="https://neutralpress.net/docs/menus"
+                  href="https://neutralpress.net/docs/feature/menus"
                   className="text-primary ml-auto"
                   presets={["hover-underline", "arrow-out"]}
                 >
-                  https://neutralpress.net/docs/menus
+                  https://neutralpress.net/docs/feature/menus
                 </Link>
               </div>
             </div>

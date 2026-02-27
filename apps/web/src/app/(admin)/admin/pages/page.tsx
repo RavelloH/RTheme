@@ -33,26 +33,26 @@ export default async function AdminPages() {
           <GridItem areas={[9, 10, 11, 12]} width={3} height={0.5} fixedHeight>
             <div className="w-full h-full p-10 flex flex-col justify-between">
               <div>
-                <div>在此处选择系统页面，可自定义其显示文字等。</div>
+                <div>在此处选择系统页面，可设置其显示布局。</div>
                 <div>
-                  你也可以选择自定义开/关区块或页面，以调整页面布局或站点结构。
+                  你也可以选择自定义区块或页面，以调整页面布局或站点结构。
                 </div>
               </div>
               <div>
                 <div>
-                  也可以在此处创建自定义页面，支持 Markdown、MDX、HTML、BLOCK 与
-                  BUILDIN 等内容类型。
+                  也可以在此处创建自定义页面，支持 Markdown、MDX、HTML。或者，以
+                  BLOCK 模式创建页面，使用内置区块系统进行布局设计。
                 </div>
-                <div>在HTML模式下，可自由引入任意内容。</div>
+                <div>在HTML模式下，可自由引入任意内容，包括第三方脚本等。</div>
               </div>
               <div>
                 详细设置指南，请参阅文档：
                 <Link
-                  href="https://neutralpress.net/docs/pages"
+                  href="https://neutralpress.net/docs/feature/pages"
                   className="text-primary ml-auto"
                   presets={["hover-underline", "arrow-out"]}
                 >
-                  https://neutralpress.net/docs/pages
+                  https://neutralpress.net/docs/feature/pages
                 </Link>
               </div>
             </div>

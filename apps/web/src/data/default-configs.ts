@@ -170,7 +170,7 @@ export const CONFIG_DEFINITIONS = {
   "user.sso.google.enabled": {
     default: false,
     description:
-      "是否启用 Google SSO 登录，详见 https://neutralpress.net/docs/sso",
+      "是否启用 Google SSO 登录，详见 https://neutralpress.net/docs/settings/sso",
   },
   "user.sso.google": {
     default: {
@@ -182,7 +182,7 @@ export const CONFIG_DEFINITIONS = {
   "user.sso.github.enabled": {
     default: false,
     description:
-      "是否启用 GitHub SSO 登录，详见 https://neutralpress.net/docs/sso",
+      "是否启用 GitHub SSO 登录，详见 https://neutralpress.net/docs/settings/sso",
   },
   "user.sso.github": {
     default: {
@@ -194,7 +194,7 @@ export const CONFIG_DEFINITIONS = {
   "user.sso.microsoft.enabled": {
     default: false,
     description:
-      "是否启用 Microsoft SSO 登录，详见 https://neutralpress.net/docs/sso",
+      "是否启用 Microsoft SSO 登录，详见 https://neutralpress.net/docs/settings/sso",
   },
   "user.sso.microsoft": {
     default: {
@@ -359,7 +359,7 @@ export const CONFIG_DEFINITIONS = {
   "media.customLoader": {
     default: "/_next/image?url={url}&w={width}&q={quality}",
     description:
-      "自定义图片加载器URL模板。默认使用Next.js内置图片优化服务。URL模板中可使用 {url}、{width}、{quality} 占位符，分别代表图片URL、请求宽度和质量参数。参考文档： https://neutralpress.net/docs/settings/media#custom-loader",
+      "自定义图片加载器URL模板。默认使用Next.js内置图片优化服务。URL模板中可使用 {url}、{width}、{quality} 占位符，分别代表图片URL、请求宽度和质量参数。参考文档： https://neutralpress.net/docs/settings/media",
   },
   // =====================================
   // 评论相关配置
@@ -375,7 +375,7 @@ export const CONFIG_DEFINITIONS = {
   "comment.akismet.enable": {
     default: false,
     description:
-      "是否启用Akismet反垃圾功能，若开启需同时填写comment.akismet.apiKey。开启后可自动检测垃圾评论。不会对 AUTHOR/EDITOR/ADMIN 进行检查。详见 https://neutralpress.net/docs/comment#akismet",
+      "是否启用Akismet反垃圾功能，若开启需同时填写comment.akismet.apiKey。开启后可自动检测垃圾评论。不会对 AUTHOR/EDITOR/ADMIN 进行检查。详见 https://neutralpress.net/docs/settings/akismet",
   },
   "comment.akismet.apiKey": {
     default: "",
@@ -478,7 +478,7 @@ export const CONFIG_DEFINITIONS = {
   "notice.ably.key": {
     default: "",
     description:
-      "[可选] Ably API 密钥。填写后可启用 WebSocket 连接，增强通知、聊天的实时性。详见 https://neutralpress.net/docs/ably",
+      "[可选] Ably API 密钥。填写后可启用 WebSocket 连接，增强通知、聊天的实时性。详见 https://neutralpress.net/docs/settings/ably",
   },
   "notice.webPush.enable": {
     default: true,
