@@ -40,7 +40,9 @@ export async function archiveListBlockFetcher(
   try {
     const posts = await prisma.post.findMany({
       where: {
-        status: "PUBLISHED",
+        status: {
+          in: ["PUBLISHED", "ARCHIVED"],
+        },
         deletedAt: null,
         publishedAt: {
           not: null,

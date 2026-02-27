@@ -61,7 +61,9 @@ const PREBUILD_POST_LIMIT = 12;
 export async function generateStaticParams() {
   const posts = await prisma.post.findMany({
     where: {
-      status: "PUBLISHED",
+      status: {
+        in: ["PUBLISHED", "ARCHIVED"],
+      },
       deletedAt: null,
     },
     select: {

@@ -88,17 +88,24 @@ export interface RenderedContent {
   mode: "markdown" | "mdx";
 }
 
+const PUBLIC_POST_STATUSES: Array<"PUBLISHED" | "ARCHIVED"> = [
+  "PUBLISHED",
+  "ARCHIVED",
+];
+
 /**
  * 获取公开的文章数据
- * 只返回已发布且未被删除的文章
+ * 返回已发布或已归档且未被删除的文章
  */
 export async function getPublishedPost(slug: string): Promise<FullPostData> {
   const getCachedData = unstable_cache(
     async (s: string) => {
-      const post = await prisma.post.findUnique({
+      const post = await prisma.post.findFirst({
         where: {
           slug: s,
-          status: "PUBLISHED",
+          status: {
+            in: PUBLIC_POST_STATUSES,
+          },
           deletedAt: null,
         },
         select: {
@@ -181,7 +188,7 @@ export async function getPublishedPost(slug: string): Promise<FullPostData> {
         featuredImage,
       } as FullPostData;
     },
-    [`published-post-${slug}`],
+    [`public-post-${slug}`],
     {
       tags: ["posts/list"],
       revalidate: false,
@@ -370,7 +377,9 @@ export async function getAdjacentPosts(
       }
 
       const baseWhere = {
-        status: "PUBLISHED" as const,
+        status: {
+          in: PUBLIC_POST_STATUSES,
+        },
         deletedAt: null,
         publishedAt: { not: null },
       };
@@ -569,7 +578,9 @@ export async function getRecommendedPosts(
       };
 
       const baseWhere = {
-        status: "PUBLISHED" as const,
+        status: {
+          in: PUBLIC_POST_STATUSES,
+        },
         deletedAt: null,
       };
 
