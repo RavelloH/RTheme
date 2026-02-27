@@ -1,6 +1,5 @@
 "use client";
 
-import { cloneElement } from "react";
 import { RiArrowRightUpLongLine } from "@remixicon/react";
 
 import Link, { useBackNavigation } from "@/components/ui/Link";
@@ -34,12 +33,9 @@ export default function LinkButton({
       </div>
       <div className="h-full aspect-square bg-primary text-primary-foreground flex items-center justify-center">
         {icon ? (
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          cloneElement(icon as React.ReactElement<any>, {
-            size: "1.5em",
-            className:
-              "transform group-hover:scale-130 transition-transform duration-300 ease-out",
-          })
+          <span className="[&_svg]:w-[1.5em] [&_svg]:h-[1.5em] transform group-hover:scale-130 transition-transform duration-300 ease-out flex items-center justify-center">
+            {icon}
+          </span>
         ) : (
           <RiArrowRightUpLongLine
             size={"1.5em"}
