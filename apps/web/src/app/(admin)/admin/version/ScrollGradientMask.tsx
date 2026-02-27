@@ -80,7 +80,7 @@ export default function ScrollGradientMask({
         ref={scrollRef}
         onScroll={updateGradient}
         style={maskStyle}
-        className={`h-full min-h-0 overflow-y-auto pr-2 ${className}`}
+        className={`scrollbar-transparent-track h-full min-h-0 overflow-y-auto pr-2 ${className}`}
       >
         {children}
       </div>

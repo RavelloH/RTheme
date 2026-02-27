@@ -125,6 +125,22 @@
     var(--color-background);
 }
 
+/* 允许局部滚动区域使用透明滑轨，避免遮罩/高亮背景下出现白色轨道 */
+.scrollbar-transparent-track {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(
+      in srgb,
+      var(--color-muted-foreground),
+      transparent 60%
+    )
+    transparent;
+}
+
+.scrollbar-transparent-track::-webkit-scrollbar-track,
+.scrollbar-transparent-track::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 /* 暗色模式下的滚动条优化 */
 .dark ::-webkit-scrollbar-thumb {
   background: color-mix(
