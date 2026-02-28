@@ -50,7 +50,11 @@ function setValueByPath(
 
   for (let i = 0; i < segments.length - 1; i++) {
     const segment = segments[i]!;
-    if (isUnsafePathSegment(segment)) {
+    if (
+      segment === "__proto__" ||
+      segment === "prototype" ||
+      segment === "constructor"
+    ) {
       return;
     }
     const existing = cursor[segment];
@@ -63,7 +67,11 @@ function setValueByPath(
   }
 
   const finalSegment = segments[segments.length - 1]!;
-  if (isUnsafePathSegment(finalSegment)) {
+  if (
+    finalSegment === "__proto__" ||
+    finalSegment === "prototype" ||
+    finalSegment === "constructor"
+  ) {
     return;
   }
 

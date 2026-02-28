@@ -82,7 +82,7 @@ const set = (obj: unknown, path: string, value: unknown) => {
   let current: Record<string, unknown> = newObj;
   for (let i = 0; i < keys.length - 1; i++) {
     const key = keys[i]!;
-    if (isUnsafePathSegment(key)) {
+    if (key === "__proto__" || key === "prototype" || key === "constructor") {
       return newObj;
     }
     // 如果中间路径不存在或者是非对象值，创建新对象
@@ -97,7 +97,11 @@ const set = (obj: unknown, path: string, value: unknown) => {
   }
 
   const finalKey = keys[keys.length - 1]!;
-  if (isUnsafePathSegment(finalKey)) {
+  if (
+    finalKey === "__proto__" ||
+    finalKey === "prototype" ||
+    finalKey === "constructor"
+  ) {
     return newObj;
   }
 
