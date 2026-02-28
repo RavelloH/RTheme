@@ -6,8 +6,12 @@ import {
 
 const UNSAFE_PATH_SEGMENTS = new Set(["__proto__", "prototype", "constructor"]);
 
+function isUnsafePathSegment(segment: string): boolean {
+  return UNSAFE_PATH_SEGMENTS.has(segment);
+}
+
 function isUnsafePath(path: string): boolean {
-  return path.split(".").some((segment) => UNSAFE_PATH_SEGMENTS.has(segment));
+  return path.split(".").some(isUnsafePathSegment);
 }
 
 function getValueByPath(source: unknown, path: string): unknown {
@@ -46,6 +50,9 @@ function setValueByPath(
 
   for (let i = 0; i < segments.length - 1; i++) {
     const segment = segments[i]!;
+    if (isUnsafePathSegment(segment)) {
+      return;
+    }
     const existing = cursor[segment];
 
     if (!existing || typeof existing !== "object" || Array.isArray(existing)) {
@@ -55,7 +62,12 @@ function setValueByPath(
     cursor = cursor[segment] as Record<string, unknown>;
   }
 
-  cursor[segments[segments.length - 1]!] = value;
+  const finalSegment = segments[segments.length - 1]!;
+  if (isUnsafePathSegment(finalSegment)) {
+    return;
+  }
+
+  cursor[finalSegment] = value;
 }
 
 export async function resolveBlockMedia(

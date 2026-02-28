@@ -36,8 +36,12 @@ import { useToast } from "@/ui/Toast";
 
 const UNSAFE_PATH_SEGMENTS = new Set(["__proto__", "prototype", "constructor"]);
 
+function isUnsafePathSegment(segment: string): boolean {
+  return UNSAFE_PATH_SEGMENTS.has(segment);
+}
+
 function isUnsafeNestedPath(path: string): boolean {
-  return path.split(".").some((segment) => UNSAFE_PATH_SEGMENTS.has(segment));
+  return path.split(".").some(isUnsafePathSegment);
 }
 
 // Helper to safe access nested objects
@@ -78,6 +82,9 @@ const set = (obj: unknown, path: string, value: unknown) => {
   let current: Record<string, unknown> = newObj;
   for (let i = 0; i < keys.length - 1; i++) {
     const key = keys[i]!;
+    if (isUnsafePathSegment(key)) {
+      return newObj;
+    }
     // 如果中间路径不存在或者是非对象值，创建新对象
     if (
       !current[key] ||
@@ -88,7 +95,13 @@ const set = (obj: unknown, path: string, value: unknown) => {
     }
     current = current[key] as Record<string, unknown>;
   }
-  current[keys[keys.length - 1]!] = value;
+
+  const finalKey = keys[keys.length - 1]!;
+  if (isUnsafePathSegment(finalKey)) {
+    return newObj;
+  }
+
+  current[finalKey] = value;
   return newObj;
 };
 
