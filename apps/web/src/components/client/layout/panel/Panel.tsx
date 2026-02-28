@@ -217,7 +217,11 @@ function queryCanonicalHref(): string {
 }
 
 function toCssBackgroundImage(url: string): string {
-  return `url("${url.replace(/"/g, '\\"')}")`;
+  const sanitized = url
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/[\r\n]/g, "");
+  return `url("${sanitized}")`;
 }
 
 function readSharePreview(pathname: string): SharePreview {

@@ -66,10 +66,7 @@ import { sendNotice } from "@/lib/server/notice";
 import prisma from "@/lib/server/prisma";
 import limitControl from "@/lib/server/rate-limit";
 import ResponseBuilder from "@/lib/server/response";
-import {
-  assertPublicHttpUrl,
-  readResponseBufferWithLimit,
-} from "@/lib/server/url-security";
+import { fetchPublicHttpUrlBuffer } from "@/lib/server/url-security";
 import { validateData } from "@/lib/server/validator";
 
 import type { Prisma } from ".prisma/client";
@@ -349,64 +346,25 @@ async function requestUrlWithTiming(url: string): Promise<{
   const start = performance.now();
 
   try {
-    let currentUrl = (await assertPublicHttpUrl(url.trim())).url.toString();
-    let redirectCount = 0;
+    const fetched = await fetchPublicHttpUrlBuffer(url.trim(), {
+      method: "GET",
+      timeoutMs: 10000,
+      maxBytes: BACKLINK_CHECK_MAX_RESPONSE_BYTES,
+      maxRedirects: BACKLINK_CHECK_MAX_REDIRECTS,
+      headers: {
+        "User-Agent": "NeutralPress FriendLinkChecker/1.0",
+      },
+    });
+    const end = performance.now();
+    const responseTime = Math.max(0, Math.round(end - start));
 
-    while (true) {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 10000);
-
-      let response: Response;
-      try {
-        response = await fetch(currentUrl, {
-          method: "GET",
-          redirect: "manual",
-          signal: controller.signal,
-          headers: {
-            "User-Agent": "NeutralPress FriendLinkChecker/1.0",
-          },
-          cache: "no-store",
-        });
-      } finally {
-        clearTimeout(timeout);
-      }
-
-      const locationHeader = response.headers.get("location");
-      if (response.status >= 300 && response.status < 400 && locationHeader) {
-        if (redirectCount >= BACKLINK_CHECK_MAX_REDIRECTS) {
-          return {
-            ok: false,
-            statusCode: response.status,
-            responseTime: Math.max(0, Math.round(performance.now() - start)),
-            html: null,
-            finalUrl: currentUrl,
-            errorMessage: "重定向次数过多",
-          };
-        }
-
-        const redirectedUrl = new URL(locationHeader, currentUrl).toString();
-        currentUrl = (
-          await assertPublicHttpUrl(redirectedUrl.trim())
-        ).url.toString();
-        redirectCount += 1;
-        continue;
-      }
-
-      const htmlBuffer = await readResponseBufferWithLimit(
-        response,
-        BACKLINK_CHECK_MAX_RESPONSE_BYTES,
-      );
-      const end = performance.now();
-      const responseTime = Math.max(0, Math.round(end - start));
-
-      return {
-        ok: response.ok,
-        statusCode: response.status,
-        responseTime,
-        html: htmlBuffer.toString("utf-8"),
-        finalUrl: currentUrl,
-      };
-    }
+    return {
+      ok: fetched.status >= 200 && fetched.status < 300,
+      statusCode: fetched.status,
+      responseTime,
+      html: fetched.body.toString("utf-8"),
+      finalUrl: fetched.finalUrl,
+    };
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "请求失败，未知错误";
@@ -522,13 +480,13 @@ function toAbsoluteUrl(candidateUrl: string, baseUrl: string): string | null {
   const raw = candidateUrl.trim();
   if (!raw) return null;
 
-  const lower = raw.toLowerCase();
-  if (lower.startsWith("javascript:") || lower.startsWith("data:")) {
-    return null;
-  }
-
   try {
-    return new URL(raw, baseUrl).toString();
+    const parsed = new URL(raw, baseUrl);
+    const protocol = parsed.protocol.toLowerCase();
+    if (protocol !== "http:" && protocol !== "https:") {
+      return null;
+    }
+    return parsed.toString();
   } catch {
     return null;
   }

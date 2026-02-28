@@ -46,6 +46,13 @@ interface MemoryCacheItem<T> {
 const memoryCache = new Map<string, MemoryCacheItem<unknown>>();
 const MEMORY_CACHE_MAX_SIZE = 1000;
 
+function wildcardToRegExp(pattern: string): RegExp {
+  const escaped = pattern
+    .replace(/[.+?^${}()|[\]\\]/g, "\\$&")
+    .replace(/\*/g, ".*");
+  return new RegExp(`^${escaped}$`);
+}
+
 /**
  * 清理过期的内存缓存
  */
@@ -275,7 +282,7 @@ export async function clearCache(
   if (enableFallback) {
     if (pattern) {
       // 按模式删除
-      const regex = new RegExp(pattern.replace("*", ".*"));
+      const regex = wildcardToRegExp(pattern);
       const keysToDelete: string[] = [];
 
       memoryCache.forEach((_, key) => {

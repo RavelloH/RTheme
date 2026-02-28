@@ -34,6 +34,12 @@ import { Switch } from "@/ui/Switch";
 import { Table, type TableColumn } from "@/ui/Table";
 import { useToast } from "@/ui/Toast";
 
+const UNSAFE_PATH_SEGMENTS = new Set(["__proto__", "prototype", "constructor"]);
+
+function isUnsafeNestedPath(path: string): boolean {
+  return path.split(".").some((segment) => UNSAFE_PATH_SEGMENTS.has(segment));
+}
+
 // Helper to safe access nested objects
 const get = (obj: unknown, path: string, def?: unknown) => {
   if (!obj || typeof obj !== "object") {
@@ -61,8 +67,15 @@ const get = (obj: unknown, path: string, def?: unknown) => {
 // Helper to set nested objects (immutable)
 const set = (obj: unknown, path: string, value: unknown) => {
   const keys = path.split(".");
-  const newObj = JSON.parse(JSON.stringify(obj || {}));
-  let current = newObj;
+  if (keys.length === 0 || isUnsafeNestedPath(path)) {
+    return JSON.parse(JSON.stringify(obj || {}));
+  }
+
+  const newObj = JSON.parse(JSON.stringify(obj || {})) as Record<
+    string,
+    unknown
+  >;
+  let current: Record<string, unknown> = newObj;
   for (let i = 0; i < keys.length - 1; i++) {
     const key = keys[i]!;
     // 如果中间路径不存在或者是非对象值，创建新对象
@@ -73,7 +86,7 @@ const set = (obj: unknown, path: string, value: unknown) => {
     ) {
       current[key] = {};
     }
-    current = current[key];
+    current = current[key] as Record<string, unknown>;
   }
   current[keys[keys.length - 1]!] = value;
   return newObj;

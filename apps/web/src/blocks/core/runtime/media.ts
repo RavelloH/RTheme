@@ -4,6 +4,12 @@ import {
   processImageField,
 } from "@/blocks/core/lib/server";
 
+const UNSAFE_PATH_SEGMENTS = new Set(["__proto__", "prototype", "constructor"]);
+
+function isUnsafePath(path: string): boolean {
+  return path.split(".").some((segment) => UNSAFE_PATH_SEGMENTS.has(segment));
+}
+
 function getValueByPath(source: unknown, path: string): unknown {
   if (!source || typeof source !== "object") {
     return undefined;
@@ -27,7 +33,15 @@ function setValueByPath(
   path: string,
   value: unknown,
 ): void {
+  if (!path || isUnsafePath(path)) {
+    return;
+  }
+
   const segments = path.split(".");
+  if (segments.length === 0) {
+    return;
+  }
+
   let cursor: Record<string, unknown> = target;
 
   for (let i = 0; i < segments.length - 1; i++) {

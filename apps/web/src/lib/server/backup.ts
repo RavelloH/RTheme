@@ -23,10 +23,7 @@ import { generateClientTokenFromReadWriteToken } from "@vercel/blob/client";
 
 import { buildObjectKey, uploadObject } from "@/lib/server/oss";
 import prisma, { type PrismaTransaction } from "@/lib/server/prisma";
-import {
-  assertPublicHttpUrl,
-  readResponseBufferWithLimit,
-} from "@/lib/server/url-security";
+import { fetchPublicHttpUrlBuffer } from "@/lib/server/url-security";
 import type { StorageProviderType } from "@/template/storages";
 
 type BackupRow = Record<string, unknown>;
@@ -277,6 +274,100 @@ function toPublicUrl(baseUrl: string, key: string): string {
   const trimmedBase = baseUrl.replace(/\/+$/, "");
   const trimmedKey = key.replace(/^\/+/, "");
   return `${trimmedBase}/${trimmedKey}`;
+}
+
+type BackupSourceAllowRule = {
+  providerName: string;
+  protocol: string;
+  hostname: string;
+  port: string;
+  pathPrefix: string;
+};
+
+function normalizeUrlPort(url: URL): string {
+  if (url.port) return url.port;
+  return url.protocol === "https:" ? "443" : "80";
+}
+
+function normalizePathPrefix(pathname: string): string {
+  const normalized = pathname.replace(/\/+$/, "");
+  return normalized || "/";
+}
+
+function buildBackupSourceAllowRule(
+  providerName: string,
+  baseUrl: string,
+): BackupSourceAllowRule | null {
+  const trimmed = baseUrl.trim();
+  if (!trimmed) return null;
+
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return null;
+    }
+
+    return {
+      providerName,
+      protocol: parsed.protocol.toLowerCase(),
+      hostname: parsed.hostname.toLowerCase(),
+      port: normalizeUrlPort(parsed),
+      pathPrefix: normalizePathPrefix(parsed.pathname),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function isUrlMatchedByAllowRule(
+  url: URL,
+  rule: BackupSourceAllowRule,
+): boolean {
+  if (url.protocol.toLowerCase() !== rule.protocol) return false;
+  if (url.hostname.toLowerCase() !== rule.hostname) return false;
+  if (normalizeUrlPort(url) !== rule.port) return false;
+
+  const targetPath = normalizePathPrefix(url.pathname);
+  if (rule.pathPrefix === "/") return true;
+
+  return (
+    targetPath === rule.pathPrefix ||
+    targetPath.startsWith(`${rule.pathPrefix}/`)
+  );
+}
+
+async function buildBackupSourceAllowRules(): Promise<BackupSourceAllowRule[]> {
+  const providers = await prisma.storageProvider.findMany({
+    where: {
+      isActive: true,
+    },
+    select: {
+      name: true,
+      baseUrl: true,
+    },
+  });
+
+  return providers
+    .map((provider) =>
+      buildBackupSourceAllowRule(provider.name, provider.baseUrl),
+    )
+    .filter((rule): rule is BackupSourceAllowRule => Boolean(rule));
+}
+
+function assertBackupSourceUrlAllowedByRules(
+  url: URL,
+  rules: BackupSourceAllowRule[],
+): void {
+  if (rules.length === 0) {
+    throw new Error("当前没有可用的备份来源白名单配置");
+  }
+
+  const allowed = rules.some((rule) => isUrlMatchedByAllowRule(url, rule));
+  if (!allowed) {
+    throw new Error(
+      "备份来源地址不在已启用存储提供商白名单中，请先通过“上传到 OSS”获取导入地址",
+    );
+  }
 }
 
 function readNumber(row: BackupRow, field: string): number | null {
@@ -980,25 +1071,21 @@ export async function loadBackupSource(
     };
   }
 
-  const { url } = await assertPublicHttpUrl(source.url);
-  const response = await fetch(url.toString(), {
+  const allowRules = await buildBackupSourceAllowRules();
+  const fetched = await fetchPublicHttpUrlBuffer(source.url, {
     method: "GET",
-    cache: "no-store",
-    redirect: "follow",
+    maxBytes: BACKUP_OSS_IMPORT_LIMIT_BYTES,
+    maxRedirects: 3,
+    timeoutMs: 10000,
+    validateUrl: (url) => assertBackupSourceUrlAllowedByRules(url, allowRules),
   });
-
-  if (!response.ok) {
-    throw new Error(`下载备份文件失败（HTTP ${response.status}）`);
+  if (fetched.status < 200 || fetched.status >= 300) {
+    throw new Error(`下载备份文件失败（HTTP ${fetched.status}）`);
   }
 
-  const buffer = await readResponseBufferWithLimit(
-    response,
-    BACKUP_OSS_IMPORT_LIMIT_BYTES,
-  );
-
   return {
-    content: buffer.toString("utf8"),
-    sizeBytes: buffer.byteLength,
+    content: fetched.body.toString("utf8"),
+    sizeBytes: fetched.body.byteLength,
     sourceType: "OSS_URL",
   };
 }
