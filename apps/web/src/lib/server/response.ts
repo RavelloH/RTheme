@@ -51,23 +51,17 @@ export interface CacheConfig {
  */
 function createSecurityHeaders(customHeaders?: HeadersInit): HeadersInit {
   const securityHeaders: HeadersInit = {
-    // 安全头
-    "X-Content-Type-Options": "nosniff",
-    "X-Frame-Options": "DENY",
-    "X-XSS-Protection": "1; mode=block",
-    "Referrer-Policy": "strict-origin-when-cross-origin",
-
-    // CORS头 - 在实际使用时应该根据请求的Origin动态设置
-    // 注意：这里不设置Access-Control-Allow-Origin，建议在中间件中根据环境配置
-
-    // CSP头
-    "Content-Security-Policy":
-      "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self' wss: https:; form-action 'self'; frame-ancestors 'none';",
-
-    // 基础头
+    // 1. 强制声明类型，禁止嗅探
     "Content-Type": "application/json",
+    "X-Content-Type-Options": "nosniff",
+
+    // 2. 禁止 API 响应加载任何资源（防御深度防御）
+    "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none';",
+
+    // 3. 默认禁用缓存
     "Cache-Control": "no-store",
 
+    // 展开自定义头覆盖默认值
     ...customHeaders,
   };
 

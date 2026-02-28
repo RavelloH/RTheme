@@ -770,6 +770,7 @@ export async function verifyPasskeyForReauth(payload: {
     const reauthToken = jwtTokenSign({
       inner: {
         uid: authUser.uid,
+        type: "reauth",
         exp: expiredAtUnix,
       },
       expired: `${REAUTH_TOKEN_EXPIRY}s`,
