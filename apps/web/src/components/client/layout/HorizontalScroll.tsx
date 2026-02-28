@@ -671,7 +671,7 @@ export default function HorizontalScroll({
       <div
         ref={contentRef}
         data-horizontal-scroll-content
-        className={`${isMobile ? "block" : forceNativeScroll ? "flex overflow-x-auto" : "flex"} h-full w-full min-w-0 will-change-transform`}
+        className={`${isMobile ? "block" : forceNativeScroll ? "flex overflow-x-auto" : "flex will-change-transform"} h-full w-full min-w-0`}
       >
         {shouldWrapWithAnimation ? (
           <HorizontalScrollAnimationWrapper

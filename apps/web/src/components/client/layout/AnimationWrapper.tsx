@@ -428,6 +428,93 @@ function createApplyDelta<T>(
   };
 }
 
+/**
+ * 初始化 word-fade 元素的 DOM 结构和初始样式
+ * 桌面端传入 transformOrigin 以获得 3D 变换基点
+ */
+function initFadeWordElement(element: Element, transformOrigin?: string): void {
+  if (element.hasAttribute("data-processed")) {
+    Array.from(element.children).forEach((child) => {
+      const span = child as HTMLSpanElement;
+      const isSpace = SPACE_REGEX.test(span.textContent || "");
+      const props: gsap.TweenVars = isSpace
+        ? { opacity: 0 }
+        : { opacity: 0, y: 10, scale: 0.8 };
+      if (transformOrigin) props.transformOrigin = transformOrigin;
+      gsap.set(span, props);
+    });
+    return;
+  }
+  const text = element.textContent || "";
+  const words = splitTextForWordFade(text);
+  const fragment = document.createDocumentFragment();
+  words.forEach((word) => {
+    const span = document.createElement("span");
+    span.textContent = word;
+    span.style.display = "inline-block";
+    if (SPACE_REGEX.test(word)) {
+      span.style.width = word.length * 0.25 + "em";
+      span.style.minWidth = word.length * 0.25 + "em";
+    }
+    fragment.appendChild(span);
+    const props: gsap.TweenVars = SPACE_REGEX.test(word)
+      ? { opacity: 0 }
+      : { opacity: 0, y: 10, scale: 0.8 };
+    if (transformOrigin) props.transformOrigin = transformOrigin;
+    gsap.set(span, props);
+  });
+  element.replaceChildren(fragment);
+  element.setAttribute("data-processed", "true");
+}
+
+/**
+ * 初始化 char-fade 元素的 DOM 结构和初始样式
+ */
+function initFadeCharElement(element: Element, transformOrigin?: string): void {
+  if (element.hasAttribute("data-processed")) {
+    Array.from(element.children).forEach((child) => {
+      const span = child as HTMLSpanElement;
+      const props: gsap.TweenVars = { opacity: 0, y: 15, rotationY: 90 };
+      if (transformOrigin) props.transformOrigin = transformOrigin;
+      gsap.set(span, props);
+    });
+    return;
+  }
+  const chars = (element.textContent || "").split("");
+  const fragment = document.createDocumentFragment();
+  chars.forEach((char) => {
+    const span = document.createElement("span");
+    span.textContent = char;
+    span.style.display = "inline-block";
+    if (char === " ") span.style.width = "0.25em";
+    fragment.appendChild(span);
+    const props: gsap.TweenVars = { opacity: 0, y: 15, rotationY: 90 };
+    if (transformOrigin) props.transformOrigin = transformOrigin;
+    gsap.set(span, props);
+  });
+  element.replaceChildren(fragment);
+  element.setAttribute("data-processed", "true");
+}
+
+/**
+ * 初始化 line-reveal 元素的分行和初始样式
+ */
+function setupLineRevealElements(
+  elements: Element[],
+  transformOrigin?: string,
+  forceAutoRebuild = false,
+): void {
+  elements.forEach((element) => {
+    prepareLineRevealElement(element, forceAutoRebuild);
+    Array.from(element.children).forEach((line) => {
+      const props: gsap.TweenVars = { opacity: 0, y: 20, rotationX: -90 };
+      if (transformOrigin) props.transformOrigin = transformOrigin;
+      gsap.set(line, props);
+    });
+    element.setAttribute("data-processed", "true");
+  });
+}
+
 function isHorizontalScrollProgressMessage(
   message: unknown,
 ): message is HorizontalScrollProgressMessage {
@@ -553,18 +640,11 @@ export default function HorizontalScrollAnimationWrapper({
       };
 
       const setupDesktopLineReveal = (forceAutoRebuild = false) => {
-        domElements.lineReveal.forEach((element) => {
-          prepareLineRevealElement(element, forceAutoRebuild);
-          Array.from(element.children).forEach((line) => {
-            gsap.set(line, {
-              opacity: 0,
-              y: 20,
-              rotationX: -90,
-              transformOrigin: "50% 100%",
-            });
-          });
-          element.setAttribute("data-processed", "true");
-        });
+        setupLineRevealElements(
+          domElements.lineReveal,
+          "50% 100%",
+          forceAutoRebuild,
+        );
       };
 
       const initDOM = () => {
@@ -572,92 +652,14 @@ export default function HorizontalScrollAnimationWrapper({
 
         if (enableFadeElements) {
           domElements.fade.forEach((el) => {
-            void gsap.set(el, {
-              opacity: 0,
-              force3D: true,
-            });
+            void gsap.set(el, { opacity: 0, force3D: true });
           });
-
-          domElements.fadeWord.forEach((element) => {
-            if (element.hasAttribute("data-processed")) {
-              Array.from(element.children).forEach((child) => {
-                const span = child as HTMLSpanElement;
-                const isSpace = SPACE_REGEX.test(span.textContent || "");
-                if (isSpace) {
-                  gsap.set(span, {
-                    opacity: 0,
-                    transformOrigin: "50% 100%",
-                  });
-                } else {
-                  gsap.set(span, {
-                    opacity: 0,
-                    y: 10,
-                    scale: 0.8,
-                    transformOrigin: "50% 100%",
-                  });
-                }
-              });
-              return;
-            }
-            const originalText = element.textContent || "";
-            const words = splitTextForWordFade(originalText);
-            const wordFragment = document.createDocumentFragment();
-            words.forEach((word) => {
-              const span = document.createElement("span");
-              span.textContent = word;
-              span.style.display = "inline-block";
-              if (SPACE_REGEX.test(word)) {
-                span.style.width = word.length * 0.25 + "em";
-                span.style.minWidth = word.length * 0.25 + "em";
-              }
-              wordFragment.appendChild(span);
-              if (SPACE_REGEX.test(word)) {
-                gsap.set(span, { opacity: 0, transformOrigin: "50% 100%" });
-              } else {
-                gsap.set(span, {
-                  opacity: 0,
-                  y: 10,
-                  scale: 0.8,
-                  transformOrigin: "50% 100%",
-                });
-              }
-            });
-            element.replaceChildren(wordFragment);
-            element.setAttribute("data-processed", "true");
-          });
-
-          domElements.fadeChar.forEach((element) => {
-            if (element.hasAttribute("data-processed")) {
-              Array.from(element.children).forEach((child) => {
-                const span = child as HTMLSpanElement;
-                gsap.set(span, {
-                  opacity: 0,
-                  y: 15,
-                  rotationY: 90,
-                  transformOrigin: "50% 50%",
-                });
-              });
-              return;
-            }
-            const originalText = element.textContent || "";
-            const chars = originalText.split("");
-            const charFragment = document.createDocumentFragment();
-            chars.forEach((char) => {
-              const span = document.createElement("span");
-              span.textContent = char;
-              span.style.display = "inline-block";
-              if (char === " ") span.style.width = "0.25em";
-              charFragment.appendChild(span);
-              gsap.set(span, {
-                opacity: 0,
-                y: 15,
-                rotationY: 90,
-                transformOrigin: "50% 50%",
-              });
-            });
-            element.replaceChildren(charFragment);
-            element.setAttribute("data-processed", "true");
-          });
+          domElements.fadeWord.forEach((el) =>
+            initFadeWordElement(el, "50% 100%"),
+          );
+          domElements.fadeChar.forEach((el) =>
+            initFadeCharElement(el, "50% 50%"),
+          );
         }
 
         if (enableLineReveal) {
@@ -939,11 +941,16 @@ export default function HorizontalScrollAnimationWrapper({
         item.isFullyRevealed = false;
         if (nextPhase === "before") {
           if (item.lastPhase !== "before") {
-            if (item.lastPhase === "partial") {
-              applyWordDelta(item.spans, item.lastVisibleCount, 0);
-            } else if (item.lastPhase === "after") {
-              item.spans.forEach((span) => hideWordSpan(span));
-            }
+            // 元素已滑出视口，跳过动画直接重置
+            item.spans.forEach((span) => {
+              const isSpace = SPACE_REGEX.test(span.textContent || "");
+              gsap.set(span, {
+                opacity: 0,
+                y: isSpace ? 0 : 10,
+                scale: isSpace ? 1 : 0.8,
+                overwrite: true,
+              });
+            });
             item.lastPhase = "before";
             item.lastVisibleCount = 0;
           }
@@ -997,11 +1004,15 @@ export default function HorizontalScrollAnimationWrapper({
         item.isFullyRevealed = false;
         if (nextPhase === "before") {
           if (item.lastPhase !== "before") {
-            if (item.lastPhase === "partial") {
-              applyCharDelta(item.spans, item.lastVisibleCount, 0);
-            } else if (item.lastPhase === "after") {
-              item.spans.forEach((span) => hideCharSpan(span));
-            }
+            // 元素已滑出视口，跳过动画直接重置
+            item.spans.forEach((span) => {
+              gsap.set(span, {
+                opacity: 0,
+                y: 15,
+                rotationY: 90,
+                overwrite: true,
+              });
+            });
             item.lastPhase = "before";
             item.lastVisibleCount = 0;
           }
@@ -1057,11 +1068,15 @@ export default function HorizontalScrollAnimationWrapper({
         item.isFullyRevealed = false;
         if (nextPhase === "before") {
           if (item.lastPhase !== "before") {
-            if (item.lastPhase === "partial") {
-              applyLineDelta(item.lines, item.lastVisibleCount, 0);
-            } else if (item.lastPhase === "after") {
-              item.lines.forEach((line) => hideLine(line));
-            }
+            // 元素已滑出视口，跳过动画直接重置
+            item.lines.forEach((line) => {
+              gsap.set(line, {
+                opacity: 0,
+                y: 20,
+                rotationX: -90,
+                overwrite: true,
+              });
+            });
             item.lastPhase = "before";
             item.lastVisibleCount = 0;
           }
@@ -1377,13 +1392,11 @@ export default function HorizontalScrollAnimationWrapper({
             };
 
             const setupMobileLineReveal = (forceAutoRebuild = false) => {
-              domElements.lineReveal.forEach((element) => {
-                prepareLineRevealElement(element, forceAutoRebuild);
-                Array.from(element.children).forEach((line) => {
-                  void gsap.set(line, { opacity: 0, y: 20, rotationX: -90 });
-                });
-                element.setAttribute("data-processed", "true");
-              });
+              setupLineRevealElements(
+                domElements.lineReveal,
+                undefined,
+                forceAutoRebuild,
+              );
             };
 
             const initDOM = () => {
@@ -1391,65 +1404,10 @@ export default function HorizontalScrollAnimationWrapper({
 
               if (enableFadeElements) {
                 domElements.fade.forEach((el) => {
-                  void gsap.set(el, {
-                    opacity: 0,
-                    force3D: true,
-                  });
+                  void gsap.set(el, { opacity: 0, force3D: true });
                 });
-
-                domElements.fadeWord.forEach((element) => {
-                  if (element.hasAttribute("data-processed")) {
-                    Array.from(element.children).forEach((child) => {
-                      const span = child as HTMLSpanElement;
-                      const isSpace = SPACE_REGEX.test(span.textContent || "");
-                      if (isSpace) {
-                        gsap.set(span, { opacity: 0 });
-                      } else {
-                        gsap.set(span, { opacity: 0, y: 10, scale: 0.8 });
-                      }
-                    });
-                    return;
-                  }
-                  const originalText = element.textContent || "";
-                  const words = splitTextForWordFade(originalText);
-                  const wordFragment = document.createDocumentFragment();
-                  words.forEach((word) => {
-                    const span = document.createElement("span");
-                    span.textContent = word;
-                    span.style.display = "inline-block";
-                    if (SPACE_REGEX.test(word)) {
-                      span.style.width = word.length * 0.25 + "em";
-                      span.style.minWidth = word.length * 0.25 + "em";
-                    }
-                    wordFragment.appendChild(span);
-                    if (SPACE_REGEX.test(word)) gsap.set(span, { opacity: 0 });
-                    else gsap.set(span, { opacity: 0, y: 10, scale: 0.8 });
-                  });
-                  element.replaceChildren(wordFragment);
-                  element.setAttribute("data-processed", "true");
-                });
-
-                domElements.fadeChar.forEach((element) => {
-                  if (element.hasAttribute("data-processed")) {
-                    Array.from(element.children).forEach((child) => {
-                      const span = child as HTMLSpanElement;
-                      gsap.set(span, { opacity: 0, y: 15, rotationY: 90 });
-                    });
-                    return;
-                  }
-                  const chars = (element.textContent || "").split("");
-                  const charFragment = document.createDocumentFragment();
-                  chars.forEach((char) => {
-                    const span = document.createElement("span");
-                    span.textContent = char;
-                    span.style.display = "inline-block";
-                    if (char === " ") span.style.width = "0.25em";
-                    charFragment.appendChild(span);
-                    gsap.set(span, { opacity: 0, y: 15, rotationY: 90 });
-                  });
-                  element.replaceChildren(charFragment);
-                  element.setAttribute("data-processed", "true");
-                });
+                domElements.fadeWord.forEach((el) => initFadeWordElement(el));
+                domElements.fadeChar.forEach((el) => initFadeCharElement(el));
               }
 
               if (enableLineReveal) {
@@ -1695,13 +1653,16 @@ export default function HorizontalScrollAnimationWrapper({
 
               if (nextPhase === "before") {
                 if (item.lastPhase !== "before") {
-                  const prevCount =
-                    item.lastPhase === "partial"
-                      ? item.lastVisibleCount
-                      : item.lastPhase === "after"
-                        ? maxCount
-                        : 0;
-                  applyWordDelta(item.spans, prevCount, 0);
+                  // 元素已滑出视口，跳过动画直接重置
+                  item.spans.forEach((span) => {
+                    const isSpace = SPACE_REGEX.test(span.textContent || "");
+                    gsap.set(span, {
+                      opacity: 0,
+                      y: isSpace ? 0 : 10,
+                      scale: isSpace ? 1 : 0.8,
+                      overwrite: true,
+                    });
+                  });
                   item.lastPhase = "before";
                   item.lastVisibleCount = 0;
                 }
@@ -1758,13 +1719,15 @@ export default function HorizontalScrollAnimationWrapper({
 
               if (nextPhase === "before") {
                 if (item.lastPhase !== "before") {
-                  const prevCount =
-                    item.lastPhase === "partial"
-                      ? item.lastVisibleCount
-                      : item.lastPhase === "after"
-                        ? maxCount
-                        : 0;
-                  applyCharDelta(item.spans, prevCount, 0);
+                  // 元素已滑出视口，跳过动画直接重置
+                  item.spans.forEach((span) => {
+                    gsap.set(span, {
+                      opacity: 0,
+                      y: 15,
+                      rotationY: 90,
+                      overwrite: true,
+                    });
+                  });
                   item.lastPhase = "before";
                   item.lastVisibleCount = 0;
                 }
@@ -1821,13 +1784,15 @@ export default function HorizontalScrollAnimationWrapper({
 
               if (nextPhase === "before") {
                 if (item.lastPhase !== "before") {
-                  const prevCount =
-                    item.lastPhase === "partial"
-                      ? item.lastVisibleCount
-                      : item.lastPhase === "after"
-                        ? maxCount
-                        : 0;
-                  applyLineDelta(item.lines, prevCount, 0);
+                  // 元素已滑出视口，跳过动画直接重置
+                  item.lines.forEach((line) => {
+                    gsap.set(line, {
+                      opacity: 0,
+                      y: 20,
+                      rotationX: -90,
+                      overwrite: true,
+                    });
+                  });
                   item.lastPhase = "before";
                   item.lastVisibleCount = 0;
                 }
