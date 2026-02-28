@@ -27,15 +27,17 @@ const ACTIVE_RANGE_MARGIN_MIN = 120;
 const ACTIVE_RANGE_MARGIN_FACTOR = 1.5;
 const WORD_TOKEN_FALLBACK_REGEX =
   /(\s+|[\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\u3040-\u30FF\uAC00-\uD7AF]|[^\s\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\u3040-\u30FF\uAC00-\uD7AF]+)/g;
-const WORD_SEGMENTER =
-  typeof Intl !== "undefined" && "Segmenter" in Intl
-    ? new Intl.Segmenter(undefined, { granularity: "word" })
-    : null;
-const GRAPHEME_SEGMENTER =
-  typeof Intl !== "undefined" && "Segmenter" in Intl
-    ? new Intl.Segmenter(undefined, { granularity: "grapheme" })
-    : null;
-const LINE_TOP_EPSILON = 1;
+// 懒初始化 Intl.Segmenter，未使用相关功能时零开销
+let _wordSegmenter: Intl.Segmenter | null | undefined;
+function getWordSegmenter(): Intl.Segmenter | null {
+  if (_wordSegmenter === undefined) {
+    _wordSegmenter =
+      typeof Intl !== "undefined" && "Segmenter" in Intl
+        ? new Intl.Segmenter(undefined, { granularity: "word" })
+        : null;
+  }
+  return _wordSegmenter;
+}
 const INLINE_DISPLAY_VALUES = new Set(["inline", "inline-block", "contents"]);
 const NON_AUTO_LINE_REVEAL_SELECTOR =
   "a,button,input,textarea,select,option,label,video,audio,iframe,canvas,svg,table,pre,code";
@@ -202,9 +204,10 @@ function forEachVerticalActiveItem<T extends VerticalMetricItem>(
 function splitTextForWordFade(text: string): string[] {
   if (!text) return [];
 
-  if (WORD_SEGMENTER) {
+  const segmenter = getWordSegmenter();
+  if (segmenter) {
     const segments = Array.from(
-      WORD_SEGMENTER.segment(text),
+      segmenter.segment(text),
       ({ segment }) => segment,
     ).filter((segment) => segment.length > 0);
     if (segments.length > 0) return segments;
@@ -214,20 +217,6 @@ function splitTextForWordFade(text: string): string[] {
   return fallbackTokens
     ? fallbackTokens.filter((segment) => segment.length > 0)
     : [];
-}
-
-function splitTextToGraphemes(text: string): string[] {
-  if (!text) return [];
-
-  if (GRAPHEME_SEGMENTER) {
-    const graphemes = Array.from(
-      GRAPHEME_SEGMENTER.segment(text),
-      ({ segment }) => segment,
-    );
-    if (graphemes.length > 0) return graphemes;
-  }
-
-  return Array.from(text);
 }
 
 function shouldAutoSplitLineRevealElement(element: Element): boolean {
@@ -256,25 +245,26 @@ function resolveLineRevealMode(element: Element): LineRevealMode {
 function normalizeManualLineRevealChildren(element: HTMLElement): void {
   if (element.children.length === 0) {
     const lines = (element.textContent || "").split(/\r?\n/);
-    element.innerHTML = "";
+    const fragment = document.createDocumentFragment();
     lines.forEach((lineText) => {
       const span = document.createElement("span");
       span.style.display = "block";
       if (lineText.length === 0) {
-        span.innerHTML = "&nbsp;";
+        span.textContent = "\u00A0";
         span.style.height = "1em";
       } else {
         span.textContent = lineText;
       }
-      element.appendChild(span);
+      fragment.appendChild(span);
     });
+    element.replaceChildren(fragment);
     return;
   }
 
   Array.from(element.children).forEach((child) => {
     const line = child as HTMLElement;
     if (!line.textContent?.trim()) {
-      line.innerHTML = "&nbsp;";
+      line.textContent = "\u00A0";
       line.style.display = "block";
       line.style.height = "1em";
       return;
@@ -283,107 +273,112 @@ function normalizeManualLineRevealChildren(element: HTMLElement): void {
   });
 }
 
+/**
+ * 使用 Range API + 二分查找检测视觉换行位置
+ * 避免为每个字素创建 DOM 节点，将 O(N) DOM 操作降为 O(1)
+ */
 function splitElementIntoVisualLines(element: HTMLElement): void {
   const sourceText =
     lineRevealSourceTextMap.get(element) ?? (element.textContent || "");
   lineRevealSourceTextMap.set(element, sourceText);
 
-  const graphemes = splitTextToGraphemes(sourceText);
-  element.innerHTML = "";
+  // 移除 \r，按 \n 分割显式换行
+  const cleanText = sourceText.replace(/\r/g, "");
 
-  if (graphemes.length === 0) {
+  if (cleanText.length === 0) {
     const emptyLine = document.createElement("span");
-    emptyLine.innerHTML = "&nbsp;";
+    emptyLine.textContent = "\u00A0";
     emptyLine.style.display = "block";
     emptyLine.style.height = "1em";
-    element.appendChild(emptyLine);
+    element.replaceChildren(emptyLine);
     return;
   }
 
-  const markers: Array<
-    | { kind: "line-break" }
-    | { kind: "token"; text: string; span: HTMLSpanElement }
-  > = [];
+  const explicitSegments = cleanText.split("\n");
+  const allLines: string[] = [];
 
-  graphemes.forEach((grapheme) => {
-    if (grapheme === "\r") return;
-    if (grapheme === "\n") {
-      const lineBreak = document.createElement("br");
-      element.appendChild(lineBreak);
-      markers.push({ kind: "line-break" });
-      return;
+  // 保存并设置测量样式，确保 Range API 检测到与 per-grapheme span 一致的换行位置
+  const savedWhiteSpace = element.style.whiteSpace;
+  const savedWordBreak = element.style.wordBreak;
+  element.style.whiteSpace = "pre-wrap";
+  element.style.wordBreak = "break-all";
+
+  for (const segment of explicitSegments) {
+    if (segment.length === 0) {
+      allLines.push("");
+      continue;
     }
 
-    const span = document.createElement("span");
-    span.textContent = grapheme;
-    span.style.whiteSpace = "pre";
-    element.appendChild(span);
-    markers.push({ kind: "token", text: grapheme, span });
-  });
+    // 用单个 TextNode 测量，避免创建 N 个 span 的 DOM 开销
+    const textNode = document.createTextNode(segment);
+    element.replaceChildren(textNode);
 
-  // Batch-read all top values to minimize layout thrashing
-  const tokenMarkers = markers.filter(
-    (m): m is { kind: "token"; text: string; span: HTMLSpanElement } =>
-      m.kind === "token",
-  );
-  const tops = tokenMarkers.map((m) => m.span.getBoundingClientRect().top);
+    // 通过 Range API + 二分查找检测视觉换行位置
+    const range = document.createRange();
+    range.setStart(textNode, 0);
+    range.setEnd(textNode, segment.length);
+    const fullRects = range.getClientRects();
 
-  const lines: string[] = [];
-  let currentLine = "";
-  let currentTop: number | null = null;
-  let endedWithLineBreak = false;
-  let tokenIndex = 0;
-
-  markers.forEach((marker) => {
-    if (marker.kind === "line-break") {
-      lines.push(currentLine);
-      currentLine = "";
-      currentTop = null;
-      endedWithLineBreak = true;
-      return;
+    if (fullRects.length <= 1) {
+      // 无换行或不可见，视为单行
+      allLines.push(segment);
+      continue;
     }
 
-    const tokenTop = tops[tokenIndex]!;
-    tokenIndex += 1;
-    if (currentTop === null) {
-      currentTop = tokenTop;
-      currentLine += marker.text;
-      endedWithLineBreak = false;
-      return;
+    const lineStartIndices: number[] = [0];
+    let searchStart = 0;
+
+    while (searchStart < segment.length) {
+      let low = searchStart + 1;
+      let high = segment.length;
+
+      while (low < high) {
+        const mid = (low + high) >> 1;
+        range.setStart(textNode, searchStart);
+        range.setEnd(textNode, mid + 1);
+        const rects = range.getClientRects();
+        if (rects.length > 1) {
+          high = mid;
+        } else {
+          low = mid + 1;
+        }
+      }
+
+      if (low < segment.length) {
+        lineStartIndices.push(low);
+      }
+      searchStart = low;
     }
 
-    if (Math.abs(tokenTop - currentTop) > LINE_TOP_EPSILON) {
-      lines.push(currentLine);
-      currentLine = marker.text;
-      currentTop = tokenTop;
-      endedWithLineBreak = false;
-      return;
+    for (let i = 0; i < lineStartIndices.length; i++) {
+      const start = lineStartIndices[i]!;
+      const end =
+        i + 1 < lineStartIndices.length
+          ? lineStartIndices[i + 1]!
+          : segment.length;
+      allLines.push(segment.slice(start, end));
     }
-
-    currentLine += marker.text;
-    endedWithLineBreak = false;
-  });
-
-  if (currentLine.length > 0 || lines.length === 0 || endedWithLineBreak) {
-    lines.push(currentLine);
   }
 
-  element.innerHTML = "";
+  // 恢复原始样式
+  element.style.whiteSpace = savedWhiteSpace;
+  element.style.wordBreak = savedWordBreak;
+
+  // 构建最终 DOM
   const fragment = document.createDocumentFragment();
-  lines.forEach((lineText) => {
+  for (const lineText of allLines) {
     const line = document.createElement("span");
     line.style.display = "block";
     line.style.whiteSpace = "pre";
     if (lineText.length === 0) {
-      line.innerHTML = "&nbsp;";
+      line.textContent = "\u00A0";
       line.style.height = "1em";
     } else {
       line.textContent = lineText;
     }
     fragment.appendChild(line);
-  });
-
-  element.appendChild(fragment);
+  }
+  element.replaceChildren(fragment);
 }
 
 function prepareLineRevealElement(
@@ -606,7 +601,7 @@ export default function HorizontalScrollAnimationWrapper({
             }
             const originalText = element.textContent || "";
             const words = splitTextForWordFade(originalText);
-            element.innerHTML = "";
+            const wordFragment = document.createDocumentFragment();
             words.forEach((word) => {
               const span = document.createElement("span");
               span.textContent = word;
@@ -615,7 +610,7 @@ export default function HorizontalScrollAnimationWrapper({
                 span.style.width = word.length * 0.25 + "em";
                 span.style.minWidth = word.length * 0.25 + "em";
               }
-              element.appendChild(span);
+              wordFragment.appendChild(span);
               if (SPACE_REGEX.test(word)) {
                 gsap.set(span, { opacity: 0, transformOrigin: "50% 100%" });
               } else {
@@ -627,6 +622,7 @@ export default function HorizontalScrollAnimationWrapper({
                 });
               }
             });
+            element.replaceChildren(wordFragment);
             element.setAttribute("data-processed", "true");
           });
 
@@ -645,13 +641,13 @@ export default function HorizontalScrollAnimationWrapper({
             }
             const originalText = element.textContent || "";
             const chars = originalText.split("");
-            element.innerHTML = "";
+            const charFragment = document.createDocumentFragment();
             chars.forEach((char) => {
               const span = document.createElement("span");
               span.textContent = char;
               span.style.display = "inline-block";
               if (char === " ") span.style.width = "0.25em";
-              element.appendChild(span);
+              charFragment.appendChild(span);
               gsap.set(span, {
                 opacity: 0,
                 y: 15,
@@ -659,6 +655,7 @@ export default function HorizontalScrollAnimationWrapper({
                 transformOrigin: "50% 50%",
               });
             });
+            element.replaceChildren(charFragment);
             element.setAttribute("data-processed", "true");
           });
         }
@@ -1310,687 +1307,698 @@ export default function HorizontalScrollAnimationWrapper({
     const initWhenReady = () => {
       document.fonts.ready.then(() => {
         if (cancelled) return;
+        // 单次 rAF 确保字体渲染完成即初始化，减少 FOUC 时间
         requestAnimationFrame(() => {
           if (cancelled) return;
-          requestAnimationFrame(() => {
-            if (cancelled) return;
-            const ctx = gsap.context(() => {
-              const cache = {
-                wrapperWidth: 0,
-                fadeMaxHeight: 0,
-                wordFadeMaxHeight: 0,
-                charFadeMaxHeight: 0,
-                lineRevealMaxHeight: 0,
-                fade: [] as {
-                  el: Element;
-                  topOffset: number;
-                  height: number;
-                  lastOpacity: number;
-                }[],
-                wordFade: [] as {
-                  el: Element;
-                  topOffset: number;
-                  height: number;
-                  spans: HTMLSpanElement[];
-                  lastPhase: RevealPhase;
-                  lastVisibleCount: number;
-                }[],
-                charFade: [] as {
-                  el: Element;
-                  topOffset: number;
-                  height: number;
-                  spans: HTMLSpanElement[];
-                  lastPhase: RevealPhase;
-                  lastVisibleCount: number;
-                }[],
-                lineReveal: [] as {
-                  el: Element;
-                  topOffset: number;
-                  height: number;
-                  lines: HTMLElement[];
-                  lastPhase: RevealPhase;
-                  lastVisibleCount: number;
-                }[],
-              };
+          const ctx = gsap.context(() => {
+            const cache = {
+              wrapperWidth: 0,
+              fadeMaxHeight: 0,
+              wordFadeMaxHeight: 0,
+              charFadeMaxHeight: 0,
+              lineRevealMaxHeight: 0,
+              fade: [] as {
+                el: Element;
+                topOffset: number;
+                height: number;
+                lastOpacity: number;
+              }[],
+              wordFade: [] as {
+                el: Element;
+                topOffset: number;
+                height: number;
+                spans: HTMLSpanElement[];
+                lastPhase: RevealPhase;
+                lastVisibleCount: number;
+              }[],
+              charFade: [] as {
+                el: Element;
+                topOffset: number;
+                height: number;
+                spans: HTMLSpanElement[];
+                lastPhase: RevealPhase;
+                lastVisibleCount: number;
+              }[],
+              lineReveal: [] as {
+                el: Element;
+                topOffset: number;
+                height: number;
+                lines: HTMLElement[];
+                lastPhase: RevealPhase;
+                lastVisibleCount: number;
+              }[],
+            };
 
-              // Cached DOM element references for mobile path
-              const domElements = {
-                fade: [] as Element[],
-                fadeWord: [] as Element[],
-                fadeChar: [] as Element[],
-                lineReveal: [] as Element[],
-              };
+            // Cached DOM element references for mobile path
+            const domElements = {
+              fade: [] as Element[],
+              fadeWord: [] as Element[],
+              fadeChar: [] as Element[],
+              lineReveal: [] as Element[],
+            };
 
-              const refreshDomElementCache = () => {
-                if (enableFadeElements) {
-                  domElements.fade = Array.from(
-                    wrapper.querySelectorAll("[data-fade]"),
-                  );
-                  domElements.fadeWord = Array.from(
-                    wrapper.querySelectorAll("[data-fade-word]"),
-                  );
-                  domElements.fadeChar = Array.from(
-                    wrapper.querySelectorAll("[data-fade-char]"),
-                  );
-                }
-                if (enableLineReveal) {
-                  domElements.lineReveal = Array.from(
-                    wrapper.querySelectorAll("[data-line-reveal]"),
-                  );
-                }
-              };
+            const refreshDomElementCache = () => {
+              if (enableFadeElements) {
+                domElements.fade = Array.from(
+                  wrapper.querySelectorAll("[data-fade]"),
+                );
+                domElements.fadeWord = Array.from(
+                  wrapper.querySelectorAll("[data-fade-word]"),
+                );
+                domElements.fadeChar = Array.from(
+                  wrapper.querySelectorAll("[data-fade-char]"),
+                );
+              }
+              if (enableLineReveal) {
+                domElements.lineReveal = Array.from(
+                  wrapper.querySelectorAll("[data-line-reveal]"),
+                );
+              }
+            };
 
-              const setupMobileLineReveal = (forceAutoRebuild = false) => {
-                domElements.lineReveal.forEach((element) => {
-                  prepareLineRevealElement(element, forceAutoRebuild);
-                  Array.from(element.children).forEach((line) => {
-                    void gsap.set(line, { opacity: 0, y: 20, rotationX: -90 });
+            const setupMobileLineReveal = (forceAutoRebuild = false) => {
+              domElements.lineReveal.forEach((element) => {
+                prepareLineRevealElement(element, forceAutoRebuild);
+                Array.from(element.children).forEach((line) => {
+                  void gsap.set(line, { opacity: 0, y: 20, rotationX: -90 });
+                });
+                element.setAttribute("data-processed", "true");
+              });
+            };
+
+            const initDOM = () => {
+              refreshDomElementCache();
+
+              if (enableFadeElements) {
+                domElements.fade.forEach((el) => {
+                  void gsap.set(el, {
+                    opacity: 0,
+                    force3D: true,
                   });
+                });
+
+                domElements.fadeWord.forEach((element) => {
+                  if (element.hasAttribute("data-processed")) {
+                    Array.from(element.children).forEach((child) => {
+                      const span = child as HTMLSpanElement;
+                      const isSpace = SPACE_REGEX.test(span.textContent || "");
+                      if (isSpace) {
+                        gsap.set(span, { opacity: 0 });
+                      } else {
+                        gsap.set(span, { opacity: 0, y: 10, scale: 0.8 });
+                      }
+                    });
+                    return;
+                  }
+                  const originalText = element.textContent || "";
+                  const words = splitTextForWordFade(originalText);
+                  const wordFragment = document.createDocumentFragment();
+                  words.forEach((word) => {
+                    const span = document.createElement("span");
+                    span.textContent = word;
+                    span.style.display = "inline-block";
+                    if (SPACE_REGEX.test(word)) {
+                      span.style.width = word.length * 0.25 + "em";
+                      span.style.minWidth = word.length * 0.25 + "em";
+                    }
+                    wordFragment.appendChild(span);
+                    if (SPACE_REGEX.test(word)) gsap.set(span, { opacity: 0 });
+                    else gsap.set(span, { opacity: 0, y: 10, scale: 0.8 });
+                  });
+                  element.replaceChildren(wordFragment);
                   element.setAttribute("data-processed", "true");
                 });
-              };
 
-              const initDOM = () => {
-                refreshDomElementCache();
-
-                if (enableFadeElements) {
-                  domElements.fade.forEach((el) => {
-                    void gsap.set(el, {
-                      opacity: 0,
-                      force3D: true,
-                    });
-                  });
-
-                  domElements.fadeWord.forEach((element) => {
-                    if (element.hasAttribute("data-processed")) {
-                      Array.from(element.children).forEach((child) => {
-                        const span = child as HTMLSpanElement;
-                        const isSpace = SPACE_REGEX.test(
-                          span.textContent || "",
-                        );
-                        if (isSpace) {
-                          gsap.set(span, { opacity: 0 });
-                        } else {
-                          gsap.set(span, { opacity: 0, y: 10, scale: 0.8 });
-                        }
-                      });
-                      return;
-                    }
-                    const originalText = element.textContent || "";
-                    const words = splitTextForWordFade(originalText);
-                    element.innerHTML = "";
-                    words.forEach((word) => {
-                      const span = document.createElement("span");
-                      span.textContent = word;
-                      span.style.display = "inline-block";
-                      if (SPACE_REGEX.test(word)) {
-                        span.style.width = word.length * 0.25 + "em";
-                        span.style.minWidth = word.length * 0.25 + "em";
-                      }
-                      element.appendChild(span);
-                      if (SPACE_REGEX.test(word))
-                        gsap.set(span, { opacity: 0 });
-                      else gsap.set(span, { opacity: 0, y: 10, scale: 0.8 });
-                    });
-                    element.setAttribute("data-processed", "true");
-                  });
-
-                  domElements.fadeChar.forEach((element) => {
-                    if (element.hasAttribute("data-processed")) {
-                      Array.from(element.children).forEach((child) => {
-                        const span = child as HTMLSpanElement;
-                        gsap.set(span, { opacity: 0, y: 15, rotationY: 90 });
-                      });
-                      return;
-                    }
-                    const chars = (element.textContent || "").split("");
-                    element.innerHTML = "";
-                    chars.forEach((char) => {
-                      const span = document.createElement("span");
-                      span.textContent = char;
-                      span.style.display = "inline-block";
-                      if (char === " ") span.style.width = "0.25em";
-                      element.appendChild(span);
+                domElements.fadeChar.forEach((element) => {
+                  if (element.hasAttribute("data-processed")) {
+                    Array.from(element.children).forEach((child) => {
+                      const span = child as HTMLSpanElement;
                       gsap.set(span, { opacity: 0, y: 15, rotationY: 90 });
                     });
-                    element.setAttribute("data-processed", "true");
+                    return;
+                  }
+                  const chars = (element.textContent || "").split("");
+                  const charFragment = document.createDocumentFragment();
+                  chars.forEach((char) => {
+                    const span = document.createElement("span");
+                    span.textContent = char;
+                    span.style.display = "inline-block";
+                    if (char === " ") span.style.width = "0.25em";
+                    charFragment.appendChild(span);
+                    gsap.set(span, { opacity: 0, y: 15, rotationY: 90 });
                   });
-                }
+                  element.replaceChildren(charFragment);
+                  element.setAttribute("data-processed", "true");
+                });
+              }
 
-                if (enableLineReveal) {
-                  setupMobileLineReveal();
-                }
-              };
-              initDOM();
+              if (enableLineReveal) {
+                setupMobileLineReveal();
+              }
+            };
+            initDOM();
 
-              const measure = () => {
-                const scrollTop =
-                  window.pageYOffset || document.documentElement.scrollTop;
-                cache.wrapperWidth = wrapper.getBoundingClientRect().width;
+            const measure = () => {
+              const scrollTop =
+                window.pageYOffset || document.documentElement.scrollTop;
+              cache.wrapperWidth = wrapper.getBoundingClientRect().width;
 
-                if (enableFadeElements) {
-                  cache.fade = [];
-                  domElements.fade.forEach((el) => {
-                    const rect = el.getBoundingClientRect();
-                    cache.fade.push({
-                      el,
-                      topOffset: rect.top + scrollTop,
-                      height: rect.height,
-                      lastOpacity: Number.NaN,
-                    });
+              if (enableFadeElements) {
+                cache.fade = [];
+                domElements.fade.forEach((el) => {
+                  const rect = el.getBoundingClientRect();
+                  cache.fade.push({
+                    el,
+                    topOffset: rect.top + scrollTop,
+                    height: rect.height,
+                    lastOpacity: Number.NaN,
                   });
-                  cache.fade.sort((a, b) => a.topOffset - b.topOffset);
-                  cache.fadeMaxHeight = getMaxVerticalItemSize(cache.fade);
+                });
+                cache.fade.sort((a, b) => a.topOffset - b.topOffset);
+                cache.fadeMaxHeight = getMaxVerticalItemSize(cache.fade);
 
-                  cache.wordFade = [];
-                  domElements.fadeWord.forEach((el) => {
-                    const rect = el.getBoundingClientRect();
-                    cache.wordFade.push({
-                      el,
-                      topOffset: rect.top + scrollTop,
-                      height: rect.height,
-                      spans: Array.from(el.children) as HTMLSpanElement[],
-                      lastPhase: "before",
-                      lastVisibleCount: 0,
-                    });
+                cache.wordFade = [];
+                domElements.fadeWord.forEach((el) => {
+                  const rect = el.getBoundingClientRect();
+                  cache.wordFade.push({
+                    el,
+                    topOffset: rect.top + scrollTop,
+                    height: rect.height,
+                    spans: Array.from(el.children) as HTMLSpanElement[],
+                    lastPhase: "before",
+                    lastVisibleCount: 0,
                   });
-                  cache.wordFade.sort((a, b) => a.topOffset - b.topOffset);
-                  cache.wordFadeMaxHeight = getMaxVerticalItemSize(
-                    cache.wordFade,
-                  );
+                });
+                cache.wordFade.sort((a, b) => a.topOffset - b.topOffset);
+                cache.wordFadeMaxHeight = getMaxVerticalItemSize(
+                  cache.wordFade,
+                );
 
-                  cache.charFade = [];
-                  domElements.fadeChar.forEach((el) => {
-                    const rect = el.getBoundingClientRect();
-                    cache.charFade.push({
-                      el,
-                      topOffset: rect.top + scrollTop,
-                      height: rect.height,
-                      spans: Array.from(el.children) as HTMLSpanElement[],
-                      lastPhase: "before",
-                      lastVisibleCount: 0,
-                    });
+                cache.charFade = [];
+                domElements.fadeChar.forEach((el) => {
+                  const rect = el.getBoundingClientRect();
+                  cache.charFade.push({
+                    el,
+                    topOffset: rect.top + scrollTop,
+                    height: rect.height,
+                    spans: Array.from(el.children) as HTMLSpanElement[],
+                    lastPhase: "before",
+                    lastVisibleCount: 0,
                   });
-                  cache.charFade.sort((a, b) => a.topOffset - b.topOffset);
-                  cache.charFadeMaxHeight = getMaxVerticalItemSize(
-                    cache.charFade,
-                  );
-                }
-                if (enableLineReveal) {
-                  cache.lineReveal = [];
-                  domElements.lineReveal.forEach((el) => {
-                    const rect = el.getBoundingClientRect();
-                    cache.lineReveal.push({
-                      el,
-                      topOffset: rect.top + scrollTop,
-                      height: rect.height,
-                      lines: Array.from(el.children) as HTMLElement[],
-                      lastPhase: "before",
-                      lastVisibleCount: 0,
-                    });
+                });
+                cache.charFade.sort((a, b) => a.topOffset - b.topOffset);
+                cache.charFadeMaxHeight = getMaxVerticalItemSize(
+                  cache.charFade,
+                );
+              }
+              if (enableLineReveal) {
+                cache.lineReveal = [];
+                domElements.lineReveal.forEach((el) => {
+                  const rect = el.getBoundingClientRect();
+                  cache.lineReveal.push({
+                    el,
+                    topOffset: rect.top + scrollTop,
+                    height: rect.height,
+                    lines: Array.from(el.children) as HTMLElement[],
+                    lastPhase: "before",
+                    lastVisibleCount: 0,
                   });
-                  cache.lineReveal.sort((a, b) => a.topOffset - b.topOffset);
-                  cache.lineRevealMaxHeight = getMaxVerticalItemSize(
-                    cache.lineReveal,
-                  );
-                }
-              };
-              measure();
+                });
+                cache.lineReveal.sort((a, b) => a.topOffset - b.topOffset);
+                cache.lineRevealMaxHeight = getMaxVerticalItemSize(
+                  cache.lineReveal,
+                );
+              }
+            };
+            measure();
 
-              const getProgressForCenter = (
-                center: number,
-                animStart: number,
-                animEnd: number,
-                totalDist: number,
-              ) => {
-                if (center <= animEnd) return 1;
-                if (center >= animStart) return 0;
-                return (animStart - center) / totalDist;
-              };
+            const getProgressForCenter = (
+              center: number,
+              animStart: number,
+              animEnd: number,
+              totalDist: number,
+            ) => {
+              if (center <= animEnd) return 1;
+              if (center >= animStart) return 0;
+              return (animStart - center) / totalDist;
+            };
 
-              const revealWordSpan = (span: HTMLSpanElement) => {
-                const isSpace = SPACE_REGEX.test(span.textContent || "");
-                if (isSpace) {
-                  gsap.to(span, {
-                    opacity: 1,
-                    duration: 0.3,
-                    ease: "power2.out",
-                    overwrite: true,
-                  });
-                  return;
-                }
+            const revealWordSpan = (span: HTMLSpanElement) => {
+              const isSpace = SPACE_REGEX.test(span.textContent || "");
+              if (isSpace) {
                 gsap.to(span, {
                   opacity: 1,
-                  y: 0,
-                  scale: 1,
-                  duration: 0.3,
-                  ease: "back.out(1.2)",
-                  overwrite: true,
-                });
-              };
-
-              const hideWordSpan = (span: HTMLSpanElement) => {
-                const isSpace = SPACE_REGEX.test(span.textContent || "");
-                if (isSpace) {
-                  gsap.to(span, {
-                    opacity: 0,
-                    duration: 0.2,
-                    overwrite: true,
-                  });
-                  return;
-                }
-                gsap.to(span, {
-                  opacity: 0,
-                  y: 10,
-                  scale: 0.8,
-                  duration: 0.2,
-                  overwrite: true,
-                });
-              };
-
-              const applyWordDelta = createApplyDelta<HTMLSpanElement>(
-                revealWordSpan,
-                hideWordSpan,
-              );
-
-              const revealCharSpan = (span: HTMLSpanElement) => {
-                gsap.to(span, {
-                  opacity: 1,
-                  y: 0,
-                  rotationY: 0,
                   duration: 0.3,
                   ease: "power2.out",
                   overwrite: true,
                 });
-              };
+                return;
+              }
+              gsap.to(span, {
+                opacity: 1,
+                y: 0,
+                scale: 1,
+                duration: 0.3,
+                ease: "back.out(1.2)",
+                overwrite: true,
+              });
+            };
 
-              const hideCharSpan = (span: HTMLSpanElement) => {
+            const hideWordSpan = (span: HTMLSpanElement) => {
+              const isSpace = SPACE_REGEX.test(span.textContent || "");
+              if (isSpace) {
                 gsap.to(span, {
                   opacity: 0,
-                  y: 15,
-                  rotationY: 90,
-                  duration: 0.3,
+                  duration: 0.2,
                   overwrite: true,
                 });
-              };
+                return;
+              }
+              gsap.to(span, {
+                opacity: 0,
+                y: 10,
+                scale: 0.8,
+                duration: 0.2,
+                overwrite: true,
+              });
+            };
 
-              const applyCharDelta = createApplyDelta<HTMLSpanElement>(
-                revealCharSpan,
-                hideCharSpan,
+            const applyWordDelta = createApplyDelta<HTMLSpanElement>(
+              revealWordSpan,
+              hideWordSpan,
+            );
+
+            const revealCharSpan = (span: HTMLSpanElement) => {
+              gsap.to(span, {
+                opacity: 1,
+                y: 0,
+                rotationY: 0,
+                duration: 0.3,
+                ease: "power2.out",
+                overwrite: true,
+              });
+            };
+
+            const hideCharSpan = (span: HTMLSpanElement) => {
+              gsap.to(span, {
+                opacity: 0,
+                y: 15,
+                rotationY: 90,
+                duration: 0.3,
+                overwrite: true,
+              });
+            };
+
+            const applyCharDelta = createApplyDelta<HTMLSpanElement>(
+              revealCharSpan,
+              hideCharSpan,
+            );
+
+            const revealLine = (line: HTMLElement) => {
+              gsap.to(line, {
+                opacity: 1,
+                y: 0,
+                rotationX: 0,
+                duration: 0.4,
+                overwrite: true,
+              });
+            };
+
+            const hideLine = (line: HTMLElement) => {
+              gsap.to(line, {
+                opacity: 0,
+                y: 20,
+                rotationX: -90,
+                duration: 0.3,
+                overwrite: true,
+              });
+            };
+
+            const applyLineDelta = createApplyDelta<HTMLElement>(
+              revealLine,
+              hideLine,
+            );
+
+            // 共享帧状态，避免 onScroll 内联闭包导致的高频 GC 压力
+            const mobileFrame = {
+              animStart: 0,
+              animEnd: 0,
+              totalDist: 0,
+            };
+
+            const updateMobileFadeItem = (
+              item: (typeof cache.fade)[number],
+            ) => {
+              const center = item.topOffset + item.height / 2;
+              const progress = getProgressForCenter(
+                center,
+                mobileFrame.animStart,
+                mobileFrame.animEnd,
+                mobileFrame.totalDist,
               );
+              const nextOpacity = Math.max(0, Math.min(1, progress));
+              if (
+                Number.isNaN(item.lastOpacity) ||
+                Math.abs(nextOpacity - item.lastOpacity) > 0.01
+              ) {
+                gsap.set(item.el, { opacity: nextOpacity });
+                item.lastOpacity = nextOpacity;
+              }
+            };
 
-              const revealLine = (line: HTMLElement) => {
-                gsap.to(line, {
-                  opacity: 1,
-                  y: 0,
-                  rotationX: 0,
-                  duration: 0.4,
-                  overwrite: true,
-                });
-              };
+            const updateMobileWordFadeItem = (
+              item: (typeof cache.wordFade)[number],
+            ) => {
+              const center = item.topOffset + item.height / 2;
+              const maxCount = item.spans.length;
+              const nextPhase: RevealPhase =
+                center <= mobileFrame.animEnd
+                  ? "after"
+                  : center >= mobileFrame.animStart
+                    ? "before"
+                    : "partial";
 
-              const hideLine = (line: HTMLElement) => {
-                gsap.to(line, {
-                  opacity: 0,
-                  y: 20,
-                  rotationX: -90,
-                  duration: 0.3,
-                  overwrite: true,
-                });
-              };
+              if (nextPhase === "after") {
+                if (item.lastPhase !== "after") {
+                  const prevCount =
+                    item.lastPhase === "partial"
+                      ? item.lastVisibleCount
+                      : item.lastPhase === "before"
+                        ? 0
+                        : maxCount;
+                  applyWordDelta(item.spans, prevCount, maxCount);
+                  item.lastPhase = "after";
+                  item.lastVisibleCount = maxCount;
+                }
+                return;
+              }
 
-              const applyLineDelta = createApplyDelta<HTMLElement>(
-                revealLine,
-                hideLine,
+              if (nextPhase === "before") {
+                if (item.lastPhase !== "before") {
+                  const prevCount =
+                    item.lastPhase === "partial"
+                      ? item.lastVisibleCount
+                      : item.lastPhase === "after"
+                        ? maxCount
+                        : 0;
+                  applyWordDelta(item.spans, prevCount, 0);
+                  item.lastPhase = "before";
+                  item.lastVisibleCount = 0;
+                }
+                return;
+              }
+
+              const progress = getProgressForCenter(
+                center,
+                mobileFrame.animStart,
+                mobileFrame.animEnd,
+                mobileFrame.totalDist,
               );
+              const nextCount = Math.floor(progress * maxCount);
+              const prevCount =
+                item.lastPhase === "partial"
+                  ? item.lastVisibleCount
+                  : item.lastPhase === "after"
+                    ? maxCount
+                    : 0;
 
-              const onScroll = () => {
-                const scrollTop =
-                  window.pageYOffset || document.documentElement.scrollTop;
-                const windowHeight = window.innerHeight;
-                const animStart = scrollTop + windowHeight;
-                const animEnd = scrollTop + windowHeight * 0.9;
-                const totalDist = animStart - animEnd;
+              if (prevCount !== nextCount || item.lastPhase !== "partial") {
+                applyWordDelta(item.spans, prevCount, nextCount);
+                item.lastPhase = "partial";
+                item.lastVisibleCount = nextCount;
+              }
+            };
 
-                if (enableFadeElements) {
-                  forEachVerticalActiveItem(
-                    cache.fade,
-                    scrollTop,
-                    windowHeight,
-                    cache.fadeMaxHeight,
-                    (item) => {
-                      const center = item.topOffset + item.height / 2;
-                      const progress = getProgressForCenter(
-                        center,
-                        animStart,
-                        animEnd,
-                        totalDist,
-                      );
-                      const nextOpacity = Math.max(0, Math.min(1, progress));
-                      if (
-                        Number.isNaN(item.lastOpacity) ||
-                        Math.abs(nextOpacity - item.lastOpacity) > 0.01
-                      ) {
-                        gsap.set(item.el, { opacity: nextOpacity });
-                        item.lastOpacity = nextOpacity;
-                      }
-                    },
-                  );
+            const updateMobileCharFadeItem = (
+              item: (typeof cache.charFade)[number],
+            ) => {
+              const center = item.topOffset + item.height / 2;
+              const maxCount = item.spans.length;
+              const nextPhase: RevealPhase =
+                center <= mobileFrame.animEnd
+                  ? "after"
+                  : center >= mobileFrame.animStart
+                    ? "before"
+                    : "partial";
 
-                  forEachVerticalActiveItem(
-                    cache.wordFade,
-                    scrollTop,
-                    windowHeight,
-                    cache.wordFadeMaxHeight,
-                    (item) => {
-                      const center = item.topOffset + item.height / 2;
-                      const maxCount = item.spans.length;
-                      const nextPhase: RevealPhase =
-                        center <= animEnd
-                          ? "after"
-                          : center >= animStart
-                            ? "before"
-                            : "partial";
-
-                      if (nextPhase === "after") {
-                        if (item.lastPhase !== "after") {
-                          const prevCount =
-                            item.lastPhase === "partial"
-                              ? item.lastVisibleCount
-                              : item.lastPhase === "before"
-                                ? 0
-                                : maxCount;
-                          applyWordDelta(item.spans, prevCount, maxCount);
-                          item.lastPhase = "after";
-                          item.lastVisibleCount = maxCount;
-                        }
-                        return;
-                      }
-
-                      if (nextPhase === "before") {
-                        if (item.lastPhase !== "before") {
-                          const prevCount =
-                            item.lastPhase === "partial"
-                              ? item.lastVisibleCount
-                              : item.lastPhase === "after"
-                                ? maxCount
-                                : 0;
-                          applyWordDelta(item.spans, prevCount, 0);
-                          item.lastPhase = "before";
-                          item.lastVisibleCount = 0;
-                        }
-                        return;
-                      }
-
-                      const progress = getProgressForCenter(
-                        center,
-                        animStart,
-                        animEnd,
-                        totalDist,
-                      );
-                      const nextCount = Math.floor(progress * maxCount);
-                      const prevCount =
-                        item.lastPhase === "partial"
-                          ? item.lastVisibleCount
-                          : item.lastPhase === "after"
-                            ? maxCount
-                            : 0;
-
-                      if (
-                        prevCount !== nextCount ||
-                        item.lastPhase !== "partial"
-                      ) {
-                        applyWordDelta(item.spans, prevCount, nextCount);
-                        item.lastPhase = "partial";
-                        item.lastVisibleCount = nextCount;
-                      }
-                    },
-                  );
-
-                  forEachVerticalActiveItem(
-                    cache.charFade,
-                    scrollTop,
-                    windowHeight,
-                    cache.charFadeMaxHeight,
-                    (item) => {
-                      const center = item.topOffset + item.height / 2;
-                      const maxCount = item.spans.length;
-                      const nextPhase: RevealPhase =
-                        center <= animEnd
-                          ? "after"
-                          : center >= animStart
-                            ? "before"
-                            : "partial";
-
-                      if (nextPhase === "after") {
-                        if (item.lastPhase !== "after") {
-                          const prevCount =
-                            item.lastPhase === "partial"
-                              ? item.lastVisibleCount
-                              : item.lastPhase === "before"
-                                ? 0
-                                : maxCount;
-                          applyCharDelta(item.spans, prevCount, maxCount);
-                          item.lastPhase = "after";
-                          item.lastVisibleCount = maxCount;
-                        }
-                        return;
-                      }
-
-                      if (nextPhase === "before") {
-                        if (item.lastPhase !== "before") {
-                          const prevCount =
-                            item.lastPhase === "partial"
-                              ? item.lastVisibleCount
-                              : item.lastPhase === "after"
-                                ? maxCount
-                                : 0;
-                          applyCharDelta(item.spans, prevCount, 0);
-                          item.lastPhase = "before";
-                          item.lastVisibleCount = 0;
-                        }
-                        return;
-                      }
-
-                      const progress = getProgressForCenter(
-                        center,
-                        animStart,
-                        animEnd,
-                        totalDist,
-                      );
-                      const nextCount = Math.floor(progress * maxCount);
-                      const prevCount =
-                        item.lastPhase === "partial"
-                          ? item.lastVisibleCount
-                          : item.lastPhase === "after"
-                            ? maxCount
-                            : 0;
-
-                      if (
-                        prevCount !== nextCount ||
-                        item.lastPhase !== "partial"
-                      ) {
-                        applyCharDelta(item.spans, prevCount, nextCount);
-                        item.lastPhase = "partial";
-                        item.lastVisibleCount = nextCount;
-                      }
-                    },
-                  );
+              if (nextPhase === "after") {
+                if (item.lastPhase !== "after") {
+                  const prevCount =
+                    item.lastPhase === "partial"
+                      ? item.lastVisibleCount
+                      : item.lastPhase === "before"
+                        ? 0
+                        : maxCount;
+                  applyCharDelta(item.spans, prevCount, maxCount);
+                  item.lastPhase = "after";
+                  item.lastVisibleCount = maxCount;
                 }
+                return;
+              }
 
-                if (enableLineReveal) {
-                  forEachVerticalActiveItem(
-                    cache.lineReveal,
-                    scrollTop,
-                    windowHeight,
-                    cache.lineRevealMaxHeight,
-                    (item) => {
-                      const center = item.topOffset + item.height / 2;
-                      const maxCount = item.lines.length;
-                      const nextPhase: RevealPhase =
-                        center <= animEnd
-                          ? "after"
-                          : center >= animStart
-                            ? "before"
-                            : "partial";
-
-                      if (nextPhase === "after") {
-                        if (item.lastPhase !== "after") {
-                          const prevCount =
-                            item.lastPhase === "partial"
-                              ? item.lastVisibleCount
-                              : item.lastPhase === "before"
-                                ? 0
-                                : maxCount;
-                          applyLineDelta(item.lines, prevCount, maxCount);
-                          item.lastPhase = "after";
-                          item.lastVisibleCount = maxCount;
-                        }
-                        return;
-                      }
-
-                      if (nextPhase === "before") {
-                        if (item.lastPhase !== "before") {
-                          const prevCount =
-                            item.lastPhase === "partial"
-                              ? item.lastVisibleCount
-                              : item.lastPhase === "after"
-                                ? maxCount
-                                : 0;
-                          applyLineDelta(item.lines, prevCount, 0);
-                          item.lastPhase = "before";
-                          item.lastVisibleCount = 0;
-                        }
-                        return;
-                      }
-
-                      const progress = getProgressForCenter(
-                        center,
-                        animStart,
-                        animEnd,
-                        totalDist,
-                      );
-                      const nextCount = Math.floor(progress * maxCount);
-                      const prevCount =
-                        item.lastPhase === "partial"
-                          ? item.lastVisibleCount
-                          : item.lastPhase === "after"
-                            ? maxCount
-                            : 0;
-
-                      if (
-                        prevCount !== nextCount ||
-                        item.lastPhase !== "partial"
-                      ) {
-                        applyLineDelta(item.lines, prevCount, nextCount);
-                        item.lastPhase = "partial";
-                        item.lastVisibleCount = nextCount;
-                      }
-                    },
-                  );
+              if (nextPhase === "before") {
+                if (item.lastPhase !== "before") {
+                  const prevCount =
+                    item.lastPhase === "partial"
+                      ? item.lastVisibleCount
+                      : item.lastPhase === "after"
+                        ? maxCount
+                        : 0;
+                  applyCharDelta(item.spans, prevCount, 0);
+                  item.lastPhase = "before";
+                  item.lastVisibleCount = 0;
                 }
-              };
+                return;
+              }
 
-              let rafId: number | null = null;
-              const scheduleOnScroll = () => {
-                if (rafId !== null) return;
-                rafId = window.requestAnimationFrame(() => {
-                  rafId = null;
-                  onScroll();
-                });
-              };
+              const progress = getProgressForCenter(
+                center,
+                mobileFrame.animStart,
+                mobileFrame.animEnd,
+                mobileFrame.totalDist,
+              );
+              const nextCount = Math.floor(progress * maxCount);
+              const prevCount =
+                item.lastPhase === "partial"
+                  ? item.lastVisibleCount
+                  : item.lastPhase === "after"
+                    ? maxCount
+                    : 0;
 
-              let isScrollSubscribed = false;
-              const subscribeScroll = () => {
-                if (isScrollSubscribed) return;
-                window.addEventListener("scroll", scheduleOnScroll, {
-                  passive: true,
-                });
-                isScrollSubscribed = true;
-              };
+              if (prevCount !== nextCount || item.lastPhase !== "partial") {
+                applyCharDelta(item.spans, prevCount, nextCount);
+                item.lastPhase = "partial";
+                item.lastVisibleCount = nextCount;
+              }
+            };
 
-              const unsubscribeScroll = () => {
-                if (!isScrollSubscribed) return;
-                window.removeEventListener("scroll", scheduleOnScroll);
-                isScrollSubscribed = false;
-                if (rafId !== null) {
-                  window.cancelAnimationFrame(rafId);
-                  rafId = null;
+            const updateMobileLineRevealItem = (
+              item: (typeof cache.lineReveal)[number],
+            ) => {
+              const center = item.topOffset + item.height / 2;
+              const maxCount = item.lines.length;
+              const nextPhase: RevealPhase =
+                center <= mobileFrame.animEnd
+                  ? "after"
+                  : center >= mobileFrame.animStart
+                    ? "before"
+                    : "partial";
+
+              if (nextPhase === "after") {
+                if (item.lastPhase !== "after") {
+                  const prevCount =
+                    item.lastPhase === "partial"
+                      ? item.lastVisibleCount
+                      : item.lastPhase === "before"
+                        ? 0
+                        : maxCount;
+                  applyLineDelta(item.lines, prevCount, maxCount);
+                  item.lastPhase = "after";
+                  item.lastVisibleCount = maxCount;
                 }
-              };
+                return;
+              }
 
-              const syncSubscriptionByVisibility = () => {
-                const wrapperRect = wrapper.getBoundingClientRect();
-                const isVisible =
-                  wrapperRect.bottom > 0 &&
-                  wrapperRect.top < window.innerHeight;
+              if (nextPhase === "before") {
+                if (item.lastPhase !== "before") {
+                  const prevCount =
+                    item.lastPhase === "partial"
+                      ? item.lastVisibleCount
+                      : item.lastPhase === "after"
+                        ? maxCount
+                        : 0;
+                  applyLineDelta(item.lines, prevCount, 0);
+                  item.lastPhase = "before";
+                  item.lastVisibleCount = 0;
+                }
+                return;
+              }
 
-                if (isVisible) {
+              const progress = getProgressForCenter(
+                center,
+                mobileFrame.animStart,
+                mobileFrame.animEnd,
+                mobileFrame.totalDist,
+              );
+              const nextCount = Math.floor(progress * maxCount);
+              const prevCount =
+                item.lastPhase === "partial"
+                  ? item.lastVisibleCount
+                  : item.lastPhase === "after"
+                    ? maxCount
+                    : 0;
+
+              if (prevCount !== nextCount || item.lastPhase !== "partial") {
+                applyLineDelta(item.lines, prevCount, nextCount);
+                item.lastPhase = "partial";
+                item.lastVisibleCount = nextCount;
+              }
+            };
+
+            const onScroll = () => {
+              const scrollTop =
+                window.pageYOffset || document.documentElement.scrollTop;
+              const windowHeight = window.innerHeight;
+              mobileFrame.animStart = scrollTop + windowHeight;
+              mobileFrame.animEnd = scrollTop + windowHeight * 0.9;
+              mobileFrame.totalDist =
+                mobileFrame.animStart - mobileFrame.animEnd;
+
+              if (enableFadeElements) {
+                forEachVerticalActiveItem(
+                  cache.fade,
+                  scrollTop,
+                  windowHeight,
+                  cache.fadeMaxHeight,
+                  updateMobileFadeItem,
+                );
+
+                forEachVerticalActiveItem(
+                  cache.wordFade,
+                  scrollTop,
+                  windowHeight,
+                  cache.wordFadeMaxHeight,
+                  updateMobileWordFadeItem,
+                );
+
+                forEachVerticalActiveItem(
+                  cache.charFade,
+                  scrollTop,
+                  windowHeight,
+                  cache.charFadeMaxHeight,
+                  updateMobileCharFadeItem,
+                );
+              }
+
+              if (enableLineReveal) {
+                forEachVerticalActiveItem(
+                  cache.lineReveal,
+                  scrollTop,
+                  windowHeight,
+                  cache.lineRevealMaxHeight,
+                  updateMobileLineRevealItem,
+                );
+              }
+            };
+
+            let rafId: number | null = null;
+            const scheduleOnScroll = () => {
+              if (rafId !== null) return;
+              rafId = window.requestAnimationFrame(() => {
+                rafId = null;
+                onScroll();
+              });
+            };
+
+            let isScrollSubscribed = false;
+            const subscribeScroll = () => {
+              if (isScrollSubscribed) return;
+              window.addEventListener("scroll", scheduleOnScroll, {
+                passive: true,
+              });
+              isScrollSubscribed = true;
+            };
+
+            const unsubscribeScroll = () => {
+              if (!isScrollSubscribed) return;
+              window.removeEventListener("scroll", scheduleOnScroll);
+              isScrollSubscribed = false;
+              if (rafId !== null) {
+                window.cancelAnimationFrame(rafId);
+                rafId = null;
+              }
+            };
+
+            const syncSubscriptionByVisibility = () => {
+              const wrapperRect = wrapper.getBoundingClientRect();
+              const isVisible =
+                wrapperRect.bottom > 0 && wrapperRect.top < window.innerHeight;
+
+              if (isVisible) {
+                subscribeScroll();
+                scheduleOnScroll();
+                return;
+              }
+              unsubscribeScroll();
+            };
+
+            const observer = new IntersectionObserver(
+              (entries) => {
+                const entry = entries[0];
+                if (!entry) return;
+                if (entry.isIntersecting) {
                   subscribeScroll();
                   scheduleOnScroll();
                   return;
                 }
                 unsubscribeScroll();
-              };
+              },
+              {
+                root: null,
+                threshold: 0,
+              },
+            );
 
-              const observer = new IntersectionObserver(
-                (entries) => {
-                  const entry = entries[0];
-                  if (!entry) return;
-                  if (entry.isIntersecting) {
-                    subscribeScroll();
-                    scheduleOnScroll();
-                    return;
-                  }
-                  unsubscribeScroll();
-                },
-                {
-                  root: null,
-                  threshold: 0,
-                },
-              );
+            observer.observe(wrapper);
 
-              observer.observe(wrapper);
-
-              let resizeDebounceTimer: ReturnType<typeof setTimeout> | null =
-                null;
-              const handleResize = () => {
-                if (resizeDebounceTimer !== null) {
-                  clearTimeout(resizeDebounceTimer);
-                }
-                resizeDebounceTimer = setTimeout(() => {
-                  resizeDebounceTimer = null;
-                  const prevWrapperWidth = cache.wrapperWidth;
+            let resizeDebounceTimer: ReturnType<typeof setTimeout> | null =
+              null;
+            const handleResize = () => {
+              if (resizeDebounceTimer !== null) {
+                clearTimeout(resizeDebounceTimer);
+              }
+              resizeDebounceTimer = setTimeout(() => {
+                resizeDebounceTimer = null;
+                const prevWrapperWidth = cache.wrapperWidth;
+                measure();
+                const hasWrapperWidthChanged =
+                  Math.abs(cache.wrapperWidth - prevWrapperWidth) > 2;
+                if (enableLineReveal && hasWrapperWidthChanged) {
+                  setupMobileLineReveal(true);
                   measure();
-                  const hasWrapperWidthChanged =
-                    Math.abs(cache.wrapperWidth - prevWrapperWidth) > 2;
-                  if (enableLineReveal && hasWrapperWidthChanged) {
-                    setupMobileLineReveal(true);
-                    measure();
-                  }
-                  syncSubscriptionByVisibility();
-                  scheduleOnScroll();
-                }, 150);
-              };
-
-              window.addEventListener("resize", handleResize);
-              cleanupFunctions.push(() => {
-                window.removeEventListener("resize", handleResize);
-                if (resizeDebounceTimer !== null) {
-                  clearTimeout(resizeDebounceTimer);
                 }
-              });
-              cleanupFunctions.push(() => {
-                observer.unobserve(wrapper);
-                observer.disconnect();
-              });
-              cleanupFunctions.push(unsubscribeScroll);
+                syncSubscriptionByVisibility();
+                scheduleOnScroll();
+              }, 150);
+            };
 
-              onScroll();
-              syncSubscriptionByVisibility();
-            }, wrapper);
-            cleanupFunctions.push(() => ctx.revert());
-          });
+            window.addEventListener("resize", handleResize);
+            cleanupFunctions.push(() => {
+              window.removeEventListener("resize", handleResize);
+              if (resizeDebounceTimer !== null) {
+                clearTimeout(resizeDebounceTimer);
+              }
+            });
+            cleanupFunctions.push(() => {
+              observer.unobserve(wrapper);
+              observer.disconnect();
+            });
+            cleanupFunctions.push(unsubscribeScroll);
+
+            onScroll();
+            syncSubscriptionByVisibility();
+          }, wrapper);
+          cleanupFunctions.push(() => ctx.revert());
         });
       });
     };

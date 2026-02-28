@@ -103,6 +103,15 @@ export default function HorizontalScroll({
     containerWidth: Number.NaN,
     contentWidth: Number.NaN,
   });
+  // 复用 message 对象，避免每帧创建新对象导致 GC 压力
+  const reusableMessageRef = useRef<HorizontalScrollProgressMessage>({
+    type: "horizontal-scroll-progress",
+    progress: 0,
+    currentX: 0,
+    maxScroll: 0,
+    containerWidth: 0,
+    contentWidth: 0,
+  });
 
   const isMobile = useMobile();
   const horizontalScrollEventStore = useEvent<HorizontalScrollEventMap>();
@@ -150,14 +159,12 @@ export default function HorizontalScroll({
         contentWidth,
       };
 
-      const message: HorizontalScrollProgressMessage = {
-        type: "horizontal-scroll-progress",
-        progress,
-        currentX: clampedCurrentX,
-        maxScroll: safeMaxScroll,
-        containerWidth,
-        contentWidth,
-      };
+      const message = reusableMessageRef.current;
+      message.progress = progress;
+      message.currentX = clampedCurrentX;
+      message.maxScroll = safeMaxScroll;
+      message.containerWidth = containerWidth;
+      message.contentWidth = contentWidth;
 
       horizontalScrollEventStore
         .getState()
@@ -292,25 +299,28 @@ export default function HorizontalScroll({
     let resizeObserver: ResizeObserver | null = null;
     let resizeHandler: (() => void) | null = null;
     let mutationObserver: MutationObserver | null = null;
+    // rAF 节流标记，避免 Observer 在动画/过渡期间每帧多次触发强制布局
+    let observerRafPending = false;
+    const scheduleObserverSync = () => {
+      nestedScrollabilityCache = new WeakMap<HTMLElement, boolean>();
+      if (!observerRafPending) {
+        observerRafPending = true;
+        requestAnimationFrame(() => {
+          observerRafPending = false;
+          syncAndEmitNativeProgress();
+        });
+      }
+    };
     if (typeof ResizeObserver !== "undefined") {
-      resizeObserver = new ResizeObserver(() => {
-        nestedScrollabilityCache = new WeakMap<HTMLElement, boolean>();
-        syncAndEmitNativeProgress();
-      });
+      resizeObserver = new ResizeObserver(scheduleObserverSync);
       resizeObserver.observe(content);
     } else {
-      resizeHandler = () => {
-        nestedScrollabilityCache = new WeakMap<HTMLElement, boolean>();
-        syncAndEmitNativeProgress();
-      };
+      resizeHandler = scheduleObserverSync;
       window.addEventListener("resize", resizeHandler);
     }
 
     if (typeof MutationObserver !== "undefined") {
-      mutationObserver = new MutationObserver(() => {
-        nestedScrollabilityCache = new WeakMap<HTMLElement, boolean>();
-        syncAndEmitNativeProgress();
-      });
+      mutationObserver = new MutationObserver(scheduleObserverSync);
       mutationObserver.observe(content, {
         childList: true,
         subtree: true,
@@ -581,26 +591,28 @@ export default function HorizontalScroll({
 
       let resizeObserver: ResizeObserver | null = null;
       let mutationObserver: MutationObserver | null = null;
+      // rAF 节流，避免 Observer 回调在动画/过渡期间高频触发布局
+      let gsapObserverRafPending = false;
+      const scheduleGsapObserverSync = () => {
+        nestedScrollabilityCache = new WeakMap<HTMLElement, boolean>();
+        if (!gsapObserverRafPending) {
+          gsapObserverRafPending = true;
+          requestAnimationFrame(() => {
+            gsapObserverRafPending = false;
+            syncSizeCache();
+          });
+        }
+      };
       if (typeof ResizeObserver !== "undefined") {
-        resizeObserver = new ResizeObserver(() => {
-          nestedScrollabilityCache = new WeakMap<HTMLElement, boolean>();
-          syncSizeCache();
-        });
+        resizeObserver = new ResizeObserver(scheduleGsapObserverSync);
         resizeObserver.observe(container);
         resizeObserver.observe(content);
       } else {
-        const handleWindowResize = () => {
-          nestedScrollabilityCache = new WeakMap<HTMLElement, boolean>();
-          syncSizeCache();
-        };
-        window.addEventListener("resize", handleWindowResize, { signal });
+        window.addEventListener("resize", scheduleGsapObserverSync, { signal });
       }
 
       if (typeof MutationObserver !== "undefined") {
-        mutationObserver = new MutationObserver(() => {
-          nestedScrollabilityCache = new WeakMap<HTMLElement, boolean>();
-          syncSizeCache();
-        });
+        mutationObserver = new MutationObserver(scheduleGsapObserverSync);
         mutationObserver.observe(content, {
           childList: true,
           subtree: true,
