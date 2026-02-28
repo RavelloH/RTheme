@@ -1745,36 +1745,47 @@ export async function updatePost(
     let oldVersionName: string | undefined;
     let processedContent: string | undefined;
     let contentMediaIds: number[] | undefined;
+    let hasContentChanged = false;
 
     if (content !== undefined) {
-      // 先处理图片链接：自动替换存储源 URL 为 /p/ 格式并提取引用
-      const result = await processContentImagesAndExtractReferences(
-        content,
-        prisma,
-      );
-      processedContent = result.processedContent;
-      contentMediaIds = result.mediaIds;
+      if (content === existingPost.content) {
+        processedContent = content;
+      } else {
+        // 先处理图片链接：自动替换存储源 URL 为 /p/ 格式并提取引用
+        const result = await processContentImagesAndExtractReferences(
+          content,
+          prisma,
+        );
+        processedContent = result.processedContent;
 
-      // 然后使用处理后的内容创建版本
-      const tv = new TextVersion(
-        existingPost.versionMetadata,
-        existingPost.content,
-      );
-      const now = new Date().toISOString();
-      const finalCommitMessage = commitMessage || "更新内容";
-      newVersionName = `${user.uid}:${now}:${finalCommitMessage}`;
-      tv.commit(processedContent, newVersionName);
+        hasContentChanged = processedContent !== existingPost.content;
+        if (hasContentChanged) {
+          contentMediaIds = result.mediaIds;
+        }
+      }
 
-      // 导出为分离式存储
-      const exported = tv.export("separate");
-      newMetadata = exported.metadata;
-      newSnapshot = exported.snapshot;
+      if (hasContentChanged) {
+        // 仅正文变化时创建文本版本，避免无变更提交触发异常
+        const tv = new TextVersion(
+          existingPost.versionMetadata,
+          existingPost.content,
+        );
+        const now = new Date().toISOString();
+        const finalCommitMessage = commitMessage || "更新内容";
+        newVersionName = `${user.uid}:${now}:${finalCommitMessage}`;
+        tv.commit(processedContent || "", newVersionName);
 
-      // 获取旧版本名称
-      const versionLog = tv.log();
-      if (versionLog.length > 1) {
-        // 获取倒数第二个版本（因为刚刚添加了新版本）
-        oldVersionName = versionLog[versionLog.length - 2]?.version;
+        // 导出为分离式存储
+        const exported = tv.export("separate");
+        newMetadata = exported.metadata;
+        newSnapshot = exported.snapshot;
+
+        // 获取旧版本名称
+        const versionLog = tv.log();
+        if (versionLog.length > 1) {
+          // 获取倒数第二个版本（因为刚刚添加了新版本）
+          oldVersionName = versionLog[versionLog.length - 2]?.version;
+        }
       }
     }
 
@@ -1859,7 +1870,7 @@ export async function updatePost(
 
     if (title !== undefined) updateData.title = title;
     if (newSlug !== undefined) updateData.slug = newSlug;
-    if (content !== undefined) {
+    if (hasContentChanged) {
       updateData.content = newSnapshot;
       (updateData as Record<string, unknown>).versionMetadata = newMetadata;
     }
@@ -2119,7 +2130,7 @@ export async function updatePost(
       }
     }
     // 如果更新了内容，记录版本号
-    if (content !== undefined && oldVersionName && newVersionName) {
+    if (hasContentChanged && oldVersionName && newVersionName) {
       auditOldValue.versionName = oldVersionName;
       auditNewValue.versionName = newVersionName;
     }
@@ -2148,7 +2159,7 @@ export async function updatePost(
       });
 
       // 自动更新搜索索引（仅在内容更新时）
-      if (content !== undefined) {
+      if (hasContentChanged) {
         try {
           const autoIndexEnabled = await getConfig("content.autoIndex.enabled");
           if (autoIndexEnabled) {
@@ -2204,7 +2215,7 @@ export async function updatePost(
       excerpt !== undefined ||
       featuredImage !== undefined ||
       isPinned !== undefined ||
-      content !== undefined ||
+      hasContentChanged ||
       status !== undefined ||
       publishedAt !== undefined ||
       categoryOrTagChanged;
