@@ -397,7 +397,7 @@ export default function SubscribeClient({
             在新的文章发布时，我们会向您发送更新通知。
           </p>
           {showVerifyTip ? (
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1 text-sm text-muted-foreground">
               订阅后需要完成邮箱确认，确认成功后才会开始接收邮件。
             </p>
           ) : null}
