@@ -21,7 +21,6 @@ import type {
 import { headers } from "next/headers";
 import type { NextResponse } from "next/server";
 
-import { refreshBootstrapCaches } from "@/actions/cache-bootstrap";
 import { logAuditEvent } from "@/lib/server/audit";
 import { authVerify } from "@/lib/server/auth-verify";
 import {
@@ -486,7 +485,17 @@ export async function importBackup(
     });
 
     try {
-      await refreshBootstrapCaches();
+      const { revalidatePath, updateTag } = await import("next/cache");
+      const { collectBootstrapTags, getCriticalRevalidatePathTargets } =
+        await import("@/lib/server/cache-bootstrap-targets");
+      const tags = await collectBootstrapTags();
+      for (const tag of tags) {
+        updateTag(tag);
+      }
+      const pathTargets = getCriticalRevalidatePathTargets();
+      for (const target of pathTargets) {
+        revalidatePath(target.path, target.type);
+      }
     } catch (cacheError) {
       console.error(
         "Refresh bootstrap caches after backup import failed:",

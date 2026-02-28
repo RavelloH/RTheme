@@ -67,6 +67,19 @@ import {
 import { analyzeText } from "@/lib/server/tokenizer";
 import { validateData } from "@/lib/server/validator";
 
+/**
+ * 安全地将 token 转换为 tsquery 词素。
+ * 移除所有 tsquery 运算符和特殊字符，防止 tsquery 注入。
+ * 返回用单引号包裹的词素字符串，空 token 返回空字符串。
+ */
+function sanitizeTsqueryToken(token: string): string {
+  // 移除 tsquery 运算符: & | ! ( ) < > : * 以及引号和反斜杠
+  const sanitized = token.replace(/[&|!()<>:*'"\\]/g, "").trim();
+  if (!sanitized) return "";
+  // 用单引号包裹作为 tsquery 字面词素
+  return `'${sanitized}'`;
+}
+
 type ActionEnvironment = "serverless" | "serveraction";
 type ActionConfig = { environment?: ActionEnvironment };
 type ActionResult<T extends ApiResponseData> =
@@ -301,20 +314,15 @@ export async function addCustomWord(
     // 对词汇进行分词，找出当前分词结果中包含这些子词的文章
     const tokens = await analyzeText(word);
 
-    // 转义 token 以便安全地用于 PostgreSQL tsquery
-    const escapeTsqueryToken = (token: string): string => {
-      // 转义反斜杠和双引号，然后用双引号包裹
-      const escaped = token.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-      return `"${escaped}"`;
-    };
-
-    // 转义所有 tokens
-    const escapedTokens = tokens.map(escapeTsqueryToken);
+    // 安全转义 token 以便用于 PostgreSQL tsquery（移除所有运算符）
+    const escapedTokens = tokens
+      .map(sanitizeTsqueryToken)
+      .filter((t) => t.length > 0);
 
     let affectedPosts: Array<{ slug: string; title: string }> = [];
 
-    // 只有在存在 token 时才进行搜索
-    if (tokens.length > 0) {
+    // 只有在存在有效 token 时才进行搜索
+    if (escapedTokens.length > 0) {
       // 构建搜索查询：使用 OR 连接所有子词
       const searchQuery = escapedTokens.join(" | ");
 
@@ -504,14 +512,8 @@ export async function deleteCustomWord(
 
     // 在删除之前，先搜索包含该词汇的文章
     // 搜索现有索引中包含该完整词汇的文章
-    // 转义 token 以便安全地用于 PostgreSQL tsquery
-    const escapeTsqueryToken = (token: string): string => {
-      // 转义反斜杠和双引号，然后用双引号包裹
-      const escaped = token.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-      return `"${escaped}"`;
-    };
-
-    const escapedWord = escapeTsqueryToken(wordData.word);
+    // 安全转义词汇以便用于 PostgreSQL tsquery（移除所有运算符）
+    const escapedWord = sanitizeTsqueryToken(wordData.word);
 
     const affectedPosts = await prisma.$queryRawUnsafe<
       Array<{ slug: string; title: string }>
@@ -939,16 +941,13 @@ export async function getIndexStatus(
 
     // 使用原生查询获取分词信息
     const postIds = posts.map((p) => p.id);
-    const tokenData = await prisma.$queryRawUnsafe<
+    const tokenData = await prisma.$queryRaw<
       Array<{
         id: number;
         titleSearchVector: string | null;
         contentSearchVector: string | null;
       }>
-    >(
-      `SELECT id, "titleSearchVector"::text as "titleSearchVector", "contentSearchVector"::text as "contentSearchVector" FROM "Post" WHERE id = ANY($1)`,
-      postIds,
-    );
+    >`SELECT id, "titleSearchVector"::text as "titleSearchVector", "contentSearchVector"::text as "contentSearchVector" FROM "Post" WHERE id = ANY(${postIds}::int[])`;
 
     // 创建 tokenData 的映射
     const tokenMap = new Map(tokenData.map((t) => [t.id, t]));
@@ -1116,16 +1115,39 @@ export async function searchPosts(
       });
     }
 
-    // 2. 转义 token 以便安全地用于 PostgreSQL tsquery
-    // 策略：直接用双引号包裹所有 token，确保安全
-    const escapeTsqueryToken = (token: string): string => {
-      // 转义反斜杠和双引号，然后用引号包裹
-      const escaped = token.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-      return `'${escaped}'`;
-    };
+    // 2. 安全转义 token 以便用于 PostgreSQL tsquery（移除所有运算符）
+    const escapedTokens = tokens
+      .map(sanitizeTsqueryToken)
+      .filter((t) => t.length > 0);
 
-    // 转义所有 tokens
-    const escapedTokens = tokens.map(escapeTsqueryToken);
+    if (escapedTokens.length === 0) {
+      // 分词后无有效 token，返回空结果
+      const searchEndTime = performance.now();
+      const durationMs = Math.round(searchEndTime - searchStartTime);
+      const clientIP = await getClientIP();
+      const { after } = await import("next/server");
+      after(async () => {
+        await prisma.searchLog.create({
+          data: {
+            query,
+            tokens: [],
+            resultCount: 0,
+            durationMs,
+            ip: clientIP,
+            sessionId: sessionId || null,
+            visitorId: visitorId || null,
+          },
+        });
+      });
+      return response.ok({
+        data: {
+          posts: [],
+          total: 0,
+          query,
+          tokensUsed: tokens,
+        },
+      });
+    }
 
     // 3. 准备查询字符串
     // OR 查询：用于 WHERE 过滤（保证召回率）和基础相关性
@@ -1824,15 +1846,12 @@ export async function getPostTokenDetails(
     }
 
     // 使用原生查询获取分词信息
-    const tokenData = await prisma.$queryRawUnsafe<
+    const tokenData = await prisma.$queryRaw<
       Array<{
         titleSearchVector: string | null;
         contentSearchVector: string | null;
       }>
-    >(
-      `SELECT "titleSearchVector"::text as "titleSearchVector", "contentSearchVector"::text as "contentSearchVector" FROM "Post" WHERE id = $1`,
-      post.id,
-    );
+    >`SELECT "titleSearchVector"::text as "titleSearchVector", "contentSearchVector"::text as "contentSearchVector" FROM "Post" WHERE id = ${post.id}`;
 
     if (
       !tokenData[0] ||
@@ -2044,15 +2063,12 @@ export async function getSearchIndexStats(
     let topWords: Array<{ word: string; count: number }> = [];
 
     if (postIds.length > 0) {
-      const tokenData = await prisma.$queryRawUnsafe<
+      const tokenData = await prisma.$queryRaw<
         Array<{
           titleSearchVector: string | null;
           contentSearchVector: string | null;
         }>
-      >(
-        `SELECT "titleSearchVector"::text as "titleSearchVector", "contentSearchVector"::text as "contentSearchVector" FROM "Post" WHERE id = ANY($1)`,
-        postIds,
-      );
+      >`SELECT "titleSearchVector"::text as "titleSearchVector", "contentSearchVector"::text as "contentSearchVector" FROM "Post" WHERE id = ANY(${postIds}::int[])`;
 
       // 词频统计 Map
       const wordFrequency = new Map<string, number>();

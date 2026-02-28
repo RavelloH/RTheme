@@ -1933,11 +1933,16 @@ export async function getRealTimeStats(
 }
 
 /**
- * 批量获取页面访问量（纯 Redis，无需认证）
+ * 批量获取页面访问量（纯 Redis，无需认证，但有速率限制）
  */
 export async function batchGetViewCounts(
   paths: string[],
 ): Promise<Array<{ path: string; count: number }>> {
+  // 速率限制，防止匿名客户端滥用
+  if (!(await limitControl(await headers(), "batchGetViewCounts"))) {
+    throw new Error("请求过于频繁，请稍后再试");
+  }
+
   try {
     // 参数验证：最多 20 个路径
     if (!Array.isArray(paths) || paths.length === 0 || paths.length > 20) {
