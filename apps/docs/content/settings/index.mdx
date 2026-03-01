@@ -19,7 +19,7 @@ title: 配置总览
 - `site.title`：站点标题。显示为：`{页面标题} | {站点标题}`（格式可在seo.title.template中自定义）
 - `site.subtitle`：[可选] 站点子标题。如果设置，将显示为：`{页面标题} | {站点标题} - {站点子标题}`（格式可在seo.title.template中自定义）
 - `site.title.template`：站点标题模板。`{pageTitle}`、`{title}`、`{subtitle}`将分别被替换为页面标题、站点标题、站点子标题。英文括号'()'及其内部内容将在未设置站点子标题时清空
-- `site.url`：站点主域名地址。无需添加尾缀斜杠
+- `site.url`：站点主域名地址，无需添加尾缀斜杠。**请填写实际访问域名的完整形式**，例如使用子域名部署时应填写 `https://blog.example.com` 而非 `https://example.com`。此项配置影响 favicon、avatar 等资源的路由匹配，填写不正确将导致图标无法正常显示
 - `site.color`：站点主题颜色变量。亮色/暗色独立配置，支持hex 或 oklch
 - `site.shiki.theme`：代码高亮主题。参考 https://shiki.style/themes ，填写主题 ID。
 - `site.custom.script`：[可选] 自定义脚本标签。可填写一个或多个 `<script>` 标签（支持 src 外链和内联脚本），将注入到页面底部用于加载自定义脚本
@@ -28,7 +28,7 @@ title: 配置总览
 - `site.birthday`：站点创建时间。用于计算运行天数及版权声明
 - `site.copyright`：站点版权信息。显示在菜单底部（桌面版）或页脚（移动版）。每行一条，可使用HTML
 - `site.avatar`：站点Logo图片URL地址，建议使用正方形图片。留空使用 /avatar.jpg 默认头像。注：修改 Logo 有两种方式：1.在媒体管理中上传，然后直接填写 /p/ 路径开头的图片链接即可；2. 将对应图片的持久化路径设置为 “avatar.jpg”，然后重新构建。
-- `site.favicon`：站点Favicon图标URL地址，建议使用正方形图片。留空使用 /icon.png 默认图标。注：修改 icon 有两种方式：1.在媒体管理中以“保留原片”模式上传jpg/png格式的图片（不要开启“有损优化”或“无损转换”），然后直接填写 /p/ 路径开头的图片链接即可；2. 以“保留原片”模式上传jpg/png格式的图片后，将对应图片的持久化路径设置为 “icon.png”，然后重新构建。
+- `site.favicon`：站点Favicon图标URL地址，建议使用正方形图片。留空使用 /icon.png 默认图标。注：修改 icon 有两种方式：1.在媒体管理中以“保留原片”模式上传jpg/png格式的图片（不要开启“有损优化”或“无损转换”），然后直接填写 /p/ 路径开头的图片链接即可；2. 以“保留原片”模式上传jpg/png格式的图片后，将对应图片的持久化路径设置为 “icon.png”，然后重新构建。**注意：方式一依赖 `site.url` 的正确配置，若 `site.url` 与实际访问域名不一致（例如使用了子域名但未填写完整），favicon 路由将无法正确匹配，导致浏览器收到透明图片。遇到 favicon 不生效时，请优先检查 `site.url` 是否填写了完整的访问域名。**
 
 ### `author.*`
 
