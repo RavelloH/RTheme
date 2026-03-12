@@ -1,4 +1,4 @@
-import * as RemixIcon from "@remixicon/react";
+import { RiArrowRightLine, RiQuestionLine } from "@remixicon/react";
 
 import type {
   CardsBlockConfig,
@@ -11,26 +11,16 @@ import RowGrid, { GridItem } from "@/components/client/layout/RowGrid";
 import CMSImage from "@/components/ui/CMSImage";
 import Link from "@/components/ui/Link";
 import { createArray } from "@/lib/client/create-array";
+import { resolveRemixIcon } from "@/lib/shared/dynamic-remix-icon";
 
 /**
  * 动态图标组件
  */
-function Icon({ name, className }: { name: string; className?: string }) {
-  const convertToComponentName = (iconName: string): string => {
-    const parts = iconName.split("-");
-    const converted = parts
-      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-      .join("");
-    return `Ri${converted}`;
-  };
-
-  const componentName = convertToComponentName(name);
-  const IconComponent = (
-    RemixIcon as Record<string, React.ComponentType<{ className?: string }>>
-  )[componentName];
+async function Icon({ name, className }: { name: string; className?: string }) {
+  const IconComponent = await resolveRemixIcon(name);
 
   if (!IconComponent) {
-    return <RemixIcon.RiQuestionLine className={className} />;
+    return <RiQuestionLine className={className} />;
   }
 
   return <IconComponent className={className} />;
@@ -451,7 +441,7 @@ export default function CardsBlock({ block }: BlockComponentProps) {
                 inline
                 disableMarkdown
               />
-              <RemixIcon.RiArrowRightLine className="w-4 h-4" />
+              <RiArrowRightLine className="w-4 h-4" />
             </span>
           </Link>
         )}
