@@ -45,3 +45,4 @@ apps/web/logs/init.log
 
 .tsbuildinfo
 generated/
+package-lock.json
