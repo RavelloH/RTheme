@@ -44,4 +44,4 @@ GEMINI.md
 apps/web/logs/init.log
 
 .tsbuildinfo
-generated/
+generated/package-lock.json
