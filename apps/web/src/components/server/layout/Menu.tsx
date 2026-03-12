@@ -1,7 +1,10 @@
 import "server-only";
 
+import {
+  RiArrowRightUpBoxFill,
+  RiArrowRightUpLongLine,
+} from "@remixicon/react";
 import Marquee from "react-fast-marquee";
-import * as RemixIcon from "@remixicon/react";
 
 import type {
   MenuItemData,
@@ -13,6 +16,7 @@ import {
   MenuHeader,
 } from "@/components/client/layout/menu/MenuMiscs";
 import MenuWrapper from "@/components/client/layout/menu/MenuWrapper";
+import { resolveRemixIcon } from "@/lib/shared/dynamic-remix-icon";
 import type { MenuItem } from "@/types/menu";
 
 function getLinkHref(menu: MenuItem): string {
@@ -22,27 +26,14 @@ function getLinkHref(menu: MenuItem): string {
   );
 }
 
-function Icon({ iconName }: { iconName: string }) {
-  const convertToComponentName = (name: string): string => {
-    const parts = name.split("-");
-    const converted = parts
-      .map((part) => {
-        return part.charAt(0).toUpperCase() + part.slice(1);
-      })
-      .join("");
-    return `Ri${converted}`;
-  };
-
-  const componentName = convertToComponentName(iconName);
-  const IconComponent = (
-    RemixIcon as Record<string, React.ComponentType<{ size?: string }>>
-  )[componentName];
+async function Icon({ iconName }: { iconName: string }) {
+  const IconComponent = await resolveRemixIcon(iconName);
 
   if (!IconComponent) {
     console.warn(
-      `Icon component not found: ${componentName}, using fallback icon`,
+      `Icon component not found for: ${iconName}, using fallback icon`,
     );
-    return <RemixIcon.RiArrowRightUpBoxFill size="1.5em" />;
+    return <RiArrowRightUpBoxFill size="1.5em" />;
   }
 
   return <IconComponent size="1.5em" />;
@@ -67,7 +58,7 @@ function toOutsiteMenuItemData(menu: MenuItem): MenuItemData {
     ...base,
     trailing: (
       <span className="text-muted-foreground ml-auto">
-        <RemixIcon.RiArrowRightUpLongLine className="w-6 h-6" />
+        <RiArrowRightUpLongLine className="w-6 h-6" />
       </span>
     ),
   };
